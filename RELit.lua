@@ -39,14 +39,35 @@ function dump(o)
     else
        return tostring(o)
     end
- end
+end
+ 
+local function write_vec34(managed_object, offset, vector, doVec3)
+	if sdk.is_managed_object(managed_object) then 
+		managed_object:write_float(offset, vector.x)
+		managed_object:write_float(offset + 4, vector.y)
+		managed_object:write_float(offset + 8, vector.z)
+		if not doVec3 and vector.w then managed_object:write_float(offset + 12, vector.w) end
+	end
+end
+
+local function write_mat4(managed_object, offset, mat4)
+	if sdk.is_managed_object(managed_object) then 
+		write_vec34(managed_object, offset, 	 mat4[0])
+		write_vec34(managed_object, offset + 16, mat4[1])
+		write_vec34(managed_object, offset + 32, mat4[2])
+		write_vec34(managed_object, offset + 48, mat4[3])
+	end
+end
 
 local function move_light_to_camera(light)
-    local xform = light:call("get_Transform")
+    local lightTransform = light:call("get_Transform")
     local camera = sdk.get_primary_camera()
-    local worldmatrix = camera:call("get_WorldMatrix")
-    xform:call("set_Position", worldmatrix[3])
-    xform:call("set_Rotation", worldmatrix:to_quat())
+	local cameraObject = camera:call("get_GameObject")
+	local cameraTransform = cameraObject:call("get_Transform")
+	lightTransform:set_position(cameraTransform:get_position())
+	lightTransform:set_rotation(cameraTransform:get_rotation())
+	-- write matrix directly. Matrix is at offset 0x80
+	write_mat4(lightTransform, 0x80, cameraTransform:call("get_WorldMatrix"))
 end
 
 local function ternary(cond, T, F)
@@ -60,16 +81,17 @@ local function add_new_light(lTable, createSpotLight, lightNo)
 	
     light_props:call("set_Enabled", true)
     light_props:call("set_Color", Vector3f.new(1, 1, 1))
-    light_props:call("set_Intensity", 1000.0)
+    light_props:call("set_Intensity", 10000.0)
 	light_props:call("set_ImportantLevel", 0)
 	light_props:call("set_BlackBodyRadiation", false)
 	light_props:call("set_UsingSameIntensity", false)
 
     -- Testing this for Spotlights
-    light_props:call("setShadowReady", true)
+    light_props:call("set_ShadowEnable", true)
 	
     move_light_to_camera(new_light)
-
+	light_props:call("update")
+	
     lightTableEntry = {
 		id = lightNo,
         light = new_light,
@@ -126,9 +148,6 @@ re.on_draw_ui(function()
 		local changed, attachedToCamValue = imgui.checkbox("Attach to camera", lightEntry.attachedToCam)
 		if changed then
 			lightEntry.attachedToCam = attachedToCamValue
-		end
-		if lightEntry.attachedToCam then
-			move_light_to_camera(light)
 		end
 
 		imgui.same_line()
@@ -314,12 +333,16 @@ end
 --Light Editor UI
 re.on_frame(function()
     for i, lightEntry in ipairs(lightsTable) do
+		local light = lightEntry.light
+		local light_props = lightEntry.light_props
+
+		if lightEntry.attachedToCam then
+			move_light_to_camera(light)
+		end
+
         if lightEntry.showLightEditor then
-            local light = lightEntry.light
-            local light_props = lightEntry.light_props
 
 			imgui.push_id(lightEntry.id)
-
             lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 64)
 
             common_light_sliders(lightEntry)
@@ -332,6 +355,7 @@ re.on_frame(function()
 
             imgui.end_window()
 			imgui.pop_id()
+			light_props:call("update")
         end
     end
 end)

@@ -76,21 +76,19 @@ end
 
 local function add_new_light(lTable, createSpotLight, lightNo)
 
-    local new_light = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {ternary(createSpotLight, "via.render.IESLightSpot", "via.render.PointLight")})
-	local light_props = lua_find_component(new_light, ternary(createSpotLight, "via.render.SpotLight", "via.render.PointLight"))
+	local componentToCreate = ternary(createSpotLight, "via.render.SpotLight", "via.render.PointLight")
+    local new_light = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
+	local light_props = lua_find_component(new_light, componentToCreate)
 	
     light_props:call("set_Enabled", true)
     light_props:call("set_Color", Vector3f.new(1, 1, 1))
-    light_props:call("set_Intensity", 10000.0)
+    light_props:call("set_Intensity", 1000.0)
 	light_props:call("set_ImportantLevel", 0)
 	light_props:call("set_BlackBodyRadiation", false)
 	light_props:call("set_UsingSameIntensity", false)
-
+	light_props:call("set_BackGroundShadowEnable", false)
     light_props:call("set_ShadowEnable", true)
 
-    -- Aparently you can pass enum vaules like this
-    light_props:call("set_ShadowCastFlag", 3)
-	
     move_light_to_camera(new_light)
 	light_props:call("update")
 	
@@ -100,7 +98,8 @@ local function add_new_light(lTable, createSpotLight, lightNo)
         light_props = light_props,
         showLightEditor = false,
         attachedToCam = false,
-		typeDescription = ternary(createSpotLight, "Spotlight ", "Pointlight ")
+		typeDescription = ternary(createSpotLight, "Spotlight ", "Pointlight "),
+		isSpotLight = createSpotLight
     }
 
     table.insert( lTable, lightTableEntry )
@@ -115,9 +114,19 @@ local function getNewLightNo()
 end
 
 --UI---------------------------------------------------------
+local function handleFloatValue(light_props, captionString, getterFuncName, setterFuncName, stepSize, min, max)
+	changed, newValue = imgui.drag_float(captionString, light_props:call(getterFuncName), stepSize, min, max)
+	if changed then light_props:call(setterFuncName, newValue) end
+end
+
+local function handleBoolValue(light_props, captionString, getterFuncName, setterFuncName)
+	changed, enabledValue = imgui.checkbox(captionString, light_props:call(getterFuncName))
+	if changed then light_props:call(setterFuncName, enabledValue) end
+end
+
 re.on_draw_ui(function()
     imgui.collapsing_header("RELit")
-	
+
     if imgui.button("Add new spotlight") then 
         add_new_light(lightsTable, true, getNewLightNo())
     end
@@ -156,13 +165,13 @@ re.on_draw_ui(function()
 
 		imgui.same_line()
 
-		if imgui.button("Edit light") then
+		if imgui.button(" Edit ") then
 			lightEntry.showLightEditor = true
 		end
 
 		imgui.same_line()
 
-		if imgui.button("Delete Light") then 
+		if imgui.button("Delete") then 
 			light:call("destroy", light)
 			table.remove(lightsTable, i)
 		end
@@ -174,165 +183,8 @@ re.on_draw_ui(function()
     imgui.text(" ")
 end)
 
-local function common_light_sliders(lightEntry)
-    imgui.text("Common light properties")
-    imgui.text("---------------------------------")
 
-    local light = lightEntry.light
-    local light_props = lightEntry.light_props
-
-    changed, newValue = imgui.drag_float("Intensity", light_props:call("get_Intensity"), 1, 0, 100000)
-    if changed then light_props:call("set_Intensity", newValue) end
-    
-    changed, new_color = imgui.color_picker3("Light color", light_props:call("get_Color"))
-    if changed then
-        light_props:call("set_BlackBodyRadiation", false)
-        light_props:call("set_Color", new_color)
-    end
-
-    changed, newValue = imgui.drag_float("Temperature", light_props:call("get_Temperature"), 1, 0, 10000)
-    if changed then
-        light_props:call("set_BlackBodyRadiation", true)
-        light_props:call("set_Temperature", newValue)
-    end
-    
-    changed, newValue = imgui.drag_float("Bounce intensity", light_props:call("get_BounceIntensity"), 0.01, 0, 1000)
-    if changed then light_props:call("set_BounceIntensity", newValue) end
-
-    changed, newValue = imgui.drag_float("Min roughness", light_props:call("get_MinRoughness"), 0.01, -10, 100)
-    if changed then light_props:call("set_MinRoughness", newValue) end
-    
-    changed, newValue = imgui.drag_float("AO Efficiency", light_props:call("get_AOEfficiency"), 0.01, 0, 10)
-    if changed then light_props:call("set_AOEfficiency", newValue) end
-
-    changed, newValue = imgui.drag_float("Volumetric scattering intensity", light_props:call("get_VolumetricScatteringIntensity"), 0.01, 0, 1000)
-    if changed then light_props:call("set_VolumetricScatteringIntensity", newValue) end
-
-    local changed, enabledValue = imgui.checkbox("Using Same Intensity", light_props:call("get_UsingSameIntensity"))
-    if changed then
-        light_props:call("set_UsingSameIntensity", enabledValue)
-    end
-end
-
-local function spotlight_sliders(lightEntry)
-    imgui.text("Spotlight properties")
-    imgui.text("---------------------------------")
-
-    local light = lightEntry.light
-    local light_props = lightEntry.light_props
-
-    changed, newValue = imgui.drag_float("Radius", light_props:call("get_Radius"), 0.01, 0, 100000)
-    if changed then light_props:call("set_Radius", newValue) end
-
-    changed, newValue = imgui.drag_float("Cone", light_props:call("get_Cone"), 0.01, 0, 100000)
-    if changed then light_props:call("set_Cone", newValue) end
-
-    -- Have no idea what this is
-    --changed, newValue = imgui.drag_float("Unit", light_props:call("get_Unit"), 0.01, 0, 100000)
-    --if changed then light_props:call("set_Unit", newValue) end
-
-    changed, newValue = imgui.drag_float("Effective Range", light_props:call("get_ReferenceEffectiveRange"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ReferenceEffectiveRange", newValue) end
-
-    changed, newValue = imgui.drag_float("Spread", light_props:call("get_Spread"), 0.01, 0, 100000)
-    if changed then light_props:call("set_Spread", newValue) end
-
-    changed, newValue = imgui.drag_float("Falloff", light_props:call("get_Falloff"), 0.01, 0, 100000)
-    if changed then light_props:call("set_Falloff", newValue) end
-
-    local changed, enabledValue = imgui.checkbox("Shadow Enable", light_props:call("get_ShadowEnable"))
-    if changed then
-        light_props:call("set_ShadowEnable", enabledValue)
-    end
-
-    -- Havent noticed much difference with the settings below
-
-    local changed, enabledValue = imgui.checkbox("BackGround Shadow Enable", light_props:call("get_BackGroundShadowEnable"))
-    if changed then
-        light_props:call("set_BackGroundShadowEnable", enabledValue)
-    end
-
-    local changed, enabledValue = imgui.checkbox("Force Shadow Cache Enable", light_props:call("get_ForceShadowCacheEnable"))
-    if changed then
-        light_props:call("set_ForceShadowCacheEnable", enabledValue)
-    end
-
-    local changed, enabledValue = imgui.checkbox("Uniform Shadow Enbale", light_props:call("get_UniformShadowEnbale"))
-    if changed then
-        light_props:call("set_UniformShadowEnbale", enabledValue)
-    end
-
-    changed, newValue = imgui.drag_float("Shadow Lod Bias", light_props:call("get_ShadowLodBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowLodBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Near Plane", light_props:call("get_ShadowNearPlane"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowNearPlane", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Variance", light_props:call("get_ShadowVariance"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowVariance", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Bias", light_props:call("get_ShadowBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Depth Bias", light_props:call("get_ShadowDepthBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowDepthBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Slope Bias", light_props:call("get_ShadowSlopeBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowSlopeBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Detail Shadow", light_props:call("get_DetailShadow"), 0.01, 0, 100000)
-    if changed then light_props:call("set_DetailShadow", newValue) end
-
-end
-
-local function pointlight_sliders(lightEntry)
-    imgui.text("Pointlight properties")
-    imgui.text("---------------------------------")
-
-    local light = lightEntry.light
-    local light_props = lightEntry.light_props
-
-    changed, newValue = imgui.drag_float("Radius", light_props:call("get_Radius"), 0.01, 0, 100000)
-    if changed then light_props:call("set_Radius", newValue) end
-
-    changed, newValue = imgui.drag_float("Effective Range", light_props:call("get_ReferenceEffectiveRange"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ReferenceEffectiveRange", newValue) end
-
-    changed, newValue = imgui.drag_float("Illuminance Threshold", light_props:call("get_IlluminanceThreshold"), 0.01, 0, 100000)
-    if changed then light_props:call("set_IlluminanceThreshold", newValue) end
-
-    local changed, enabledValue = imgui.checkbox("Shadow Enable", light_props:call("get_ShadowEnable"))
-    if changed then
-        light_props:call("set_ShadowEnable", enabledValue)
-    end
-
-    local changed, enabledValue = imgui.checkbox("BackGround Shadow Enable", light_props:call("get_BackGroundShadowEnable"))
-    if changed then
-        light_props:call("set_BackGroundShadowEnable", enabledValue)
-    end
-
-    local changed, enabledValue = imgui.checkbox("Force Shadow Cache Enable", light_props:call("get_ForceShadowCacheEnable"))
-    if changed then
-        light_props:call("set_ForceShadowCacheEnable", enabledValue)
-    end
-
-    changed, newValue = imgui.drag_float("Shadow Lod Bias", light_props:call("get_ShadowLodBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowLodBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Near Plane", light_props:call("get_ShadowNearPlane"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowNearPlane", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Bias", light_props:call("get_ShadowBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Depth Bias", light_props:call("get_ShadowDepthBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowDepthBias", newValue) end
-
-    changed, newValue = imgui.drag_float("Shadow Slope Bias", light_props:call("get_ShadowSlopeBias"), 0.01, 0, 100000)
-    if changed then light_props:call("set_ShadowSlopeBias", newValue) end
-
-end
-------------------------------------------------------------------------
+local setShadowReadyFlag = false
 
 --Light Editor window UI-------------------------------------------------------
 re.on_frame(function()
@@ -349,13 +201,51 @@ re.on_frame(function()
 			imgui.push_id(lightEntry.id)
             lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 64)
 
-            common_light_sliders(lightEntry)
+			handleFloatValue(light_props, "Intensity", "get_Intensity", "set_Intensity", 1, 0, 100000)
+			
+			changed, new_color = imgui.color_picker3("Light color", light_props:call("get_Color"))
+			if changed then
+				light_props:call("set_Color", new_color)
+			end
 
-            if (lightEntry.typeDescription == "Spotlight ") then
-                spotlight_sliders(lightEntry)
-            else
-                pointlight_sliders(lightEntry)
-            end
+			handleBoolValue(light_props, "Use temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
+			handleFloatValue(light_props, "Temperature", "get_Temperature", "set_Temperature", 10, 0, 10000)
+			handleFloatValue(light_props, "Bounce intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
+			handleFloatValue(light_props, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, -10, 100)
+			handleFloatValue(light_props, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.01, 0, 10)
+			handleFloatValue(light_props, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
+
+			-- Have no idea what this is
+			--changed, newValue = imgui.drag_float("Unit", light_props:call("get_Unit"), 0.01, 0, 100000)
+			--if changed then light_props:call("set_Unit", newValue) end
+
+			handleFloatValue(light_props, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000)
+			handleFloatValue(light_props, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000)
+
+			if lightEntry.isSpotLight then
+				handleFloatValue(light_props, "Cone", "get_Cone", "set_Cone", 0.01, 0, 1000)
+				handleFloatValue(light_props, "Spread", "get_Spread", "set_Spread", 0.01, 0, 100)
+				handleFloatValue(light_props, "Falloff", "get_Falloff", "set_Falloff", 0.01, 0, 100)
+			end
+			handleBoolValue(light_props, "Enable shadows", "get_ShadowEnable", "set_ShadowEnable")
+			handleFloatValue(light_props, "Shadow bias", "get_ShadowBias", "set_ShadowBias", 0.0000001, 0, 1.0)
+			handleFloatValue(light_props, "Shadow lod bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0000001, 0, 1.0)
+			handleFloatValue(light_props, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0000001, 0, 1.0)
+			handleFloatValue(light_props, "Shadow slope bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0000001, 0, 1.0)
+			handleFloatValue(light_props, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.00001, 0, 1.0)
+
+			if lightEntry.isSpotLight then
+				handleFloatValue(light_props, "Shadow blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0)
+				handleFloatValue(light_props, "Detail shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)
+			end 
+			
+			imgui.spacing()
+			imgui.text(" ")
+			imgui.same_line()
+			if imgui.button("Close") then
+				lightEntry.showLightEditor = false
+			end
+			imgui.spacing()
 
             imgui.end_window()
 			imgui.pop_id()

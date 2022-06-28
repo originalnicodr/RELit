@@ -1,5 +1,9 @@
 --By originalnicodr and Otis_inf
 
+local lightsTable = {}
+local lightCounter = 0
+local gameName = reframework:get_game_name()
+
 function create_gameobj(name, component_names)
     local new_gameobj = sdk.find_type_definition("via.GameObject"):get_method("create(System.String)"):call(nil, name)
     if new_gameobj and new_gameobj:add_ref() and new_gameobj:call(".ctor") then
@@ -105,9 +109,6 @@ local function add_new_light(lTable, createSpotLight, lightNo)
     table.insert( lTable, lightTableEntry )
 end
 
-local lightsTable = {}
-local lightCounter = 0
-
 local function getNewLightNo()
 	lightCounter = lightCounter+1
 	return lightCounter
@@ -184,8 +185,6 @@ re.on_draw_ui(function()
 end)
 
 
-local setShadowReadyFlag = false
-
 --Light Editor window UI-------------------------------------------------------
 re.on_frame(function()
     for i, lightEntry in ipairs(lightsTable) do
@@ -208,11 +207,14 @@ re.on_frame(function()
 				light_props:call("set_Color", new_color)
 			end
 
-			handleBoolValue(light_props, "Use temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
-			handleFloatValue(light_props, "Temperature", "get_Temperature", "set_Temperature", 10, 0, 10000)
+			if gameName~="dmc5" then
+				-- temperature settings don't work for some reason in DMC5
+				handleBoolValue(light_props, "Use temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
+				handleFloatValue(light_props, "Temperature", "get_Temperature", "set_Temperature", 10, 0, 10000)
+			end
 			handleFloatValue(light_props, "Bounce intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
-			handleFloatValue(light_props, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, -10, 100)
-			handleFloatValue(light_props, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.01, 0, 10)
+			handleFloatValue(light_props, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0)
+			handleFloatValue(light_props, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10)
 			handleFloatValue(light_props, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
 
 			-- Have no idea what this is
@@ -229,13 +231,13 @@ re.on_frame(function()
 			end
 			handleBoolValue(light_props, "Enable shadows", "get_ShadowEnable", "set_ShadowEnable")
 			handleFloatValue(light_props, "Shadow bias", "get_ShadowBias", "set_ShadowBias", 0.0000001, 0, 1.0)
+			handleFloatValue(light_props, "Shadow blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0)
 			handleFloatValue(light_props, "Shadow lod bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0000001, 0, 1.0)
 			handleFloatValue(light_props, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0000001, 0, 1.0)
 			handleFloatValue(light_props, "Shadow slope bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0000001, 0, 1.0)
 			handleFloatValue(light_props, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.00001, 0, 1.0)
 
 			if lightEntry.isSpotLight then
-				handleFloatValue(light_props, "Shadow blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0)
 				handleFloatValue(light_props, "Detail shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)
 			end 
 			

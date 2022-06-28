@@ -1,4 +1,4 @@
---By originalnicodr
+--By originalnicodr and Otis_inf
 
 function create_gameobj(name, component_names)
     local new_gameobj = sdk.find_type_definition("via.GameObject"):get_method("create(System.String)"):call(nil, name)
@@ -86,8 +86,10 @@ local function add_new_light(lTable, createSpotLight, lightNo)
 	light_props:call("set_BlackBodyRadiation", false)
 	light_props:call("set_UsingSameIntensity", false)
 
-    -- Testing this for Spotlights
     light_props:call("set_ShadowEnable", true)
+
+    -- Aparently you can pass enum vaules like this
+    light_props:call("set_ShadowCastFlag", 3)
 	
     move_light_to_camera(new_light)
 	light_props:call("update")
@@ -112,7 +114,7 @@ local function getNewLightNo()
 	return lightCounter
 end
 
---UI
+--UI---------------------------------------------------------
 re.on_draw_ui(function()
     imgui.collapsing_header("RELit")
 	
@@ -124,19 +126,21 @@ re.on_draw_ui(function()
         add_new_light(lightsTable, false, getNewLightNo())
     end
 
+    imgui.spacing()
+
     for i, lightEntry in ipairs(lightsTable) do
         local light = lightEntry.light
         local light_props = lightEntry.light_props
 
-		imgui.text(lightEntry.typeDescription..tostring(i))
-		imgui.same_line()
-
-		imgui.push_id(lightEntry.id)
-		local changed, enabledValue = imgui.checkbox("Enabled", light_props:call("get_Enabled"))
+        imgui.push_id(lightEntry.id)
+		local changed, enabledValue = imgui.checkbox("", light_props:call("get_Enabled"))
 		if changed then
 			light_props:call("set_Enabled", enabledValue)
 		end
 
+		imgui.same_line()
+
+		imgui.text(lightEntry.typeDescription..tostring(i))
 		imgui.same_line()
 
 		if imgui.button("Move To Camera") then 
@@ -162,6 +166,7 @@ re.on_draw_ui(function()
 			light:call("destroy", light)
 			table.remove(lightsTable, i)
 		end
+
 		imgui.pop_id()
     end
 
@@ -208,8 +213,6 @@ local function common_light_sliders(lightEntry)
         light_props:call("set_UsingSameIntensity", enabledValue)
     end
 end
-
---Shadow Cast Flag
 
 local function spotlight_sliders(lightEntry)
     imgui.text("Spotlight properties")
@@ -329,8 +332,9 @@ local function pointlight_sliders(lightEntry)
     if changed then light_props:call("set_ShadowSlopeBias", newValue) end
 
 end
+------------------------------------------------------------------------
 
---Light Editor UI
+--Light Editor window UI-------------------------------------------------------
 re.on_frame(function()
     for i, lightEntry in ipairs(lightsTable) do
 		local light = lightEntry.light
@@ -359,3 +363,4 @@ re.on_frame(function()
         end
     end
 end)
+-------------------------------------------------------------------------

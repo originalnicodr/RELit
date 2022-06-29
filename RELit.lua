@@ -91,6 +91,8 @@ local function add_new_light(lTable, createSpotLight, lightNo)
 	lightProps:call("set_UsingSameIntensity", false)
 	lightProps:call("set_BackGroundShadowEnable", false)
     lightProps:call("set_ShadowEnable", true)
+	lightProps:call("set_ShadowBias", 0.000001)
+	lightProps:call("set_ShadowVariance", 0)
 
     move_light_to_camera(newLight)
 	lightProps:call("update")
@@ -252,7 +254,7 @@ function light_editor_menu()
 			if gameName~="dmc5" then
 				-- temperature settings don't work for some reason in DMC5
 				handle_bool_value(lightProps, "Use temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
-				handle_float_value(lightProps, "Temperature", "get_Temperature", "set_Temperature", 10, 0, 10000)
+				handle_float_value(lightProps, "Temperature", "get_Temperature", "set_Temperature", 100, 1000, 20000)
 			end
 			handle_float_value(lightProps, "Bounce intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
 			handle_float_value(lightProps, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0)

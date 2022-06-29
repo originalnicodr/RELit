@@ -1,4 +1,30 @@
---By originalnicodr and Otis_inf
+--//////////////////////////////////////////////////////////////////////////////////////////////
+--MIT License
+--Copyright (c) 2022 Frans 'Otis_Inf' Bouma & Nicolás 'originalnicodr' Uriel Navall 
+--
+--Permission is hereby granted, free of charge, to any person obtaining a copy
+--of this software and associated documentation files (the "Software"), to deal
+--in the Software without restriction, including without limitation the rights
+--to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+--copies of the Software, and to permit persons to whom the Software is
+--furnished to do so, subject to the following conditions:
+--
+--The above copyright notice and this permission notice shall be included in all
+--copies or substantial portions of the Software.
+--
+--THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+--IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+--FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+--AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+--LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+--OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+--SOFTWARE.
+--//////////////////////////////////////////////////////////////////////////////////////////////
+-- Changelog
+-- v1.0		- First release
+--//////////////////////////////////////////////////////////////////////////////////////////////
+
+local relitVersion = "1.0"
 
 local lightsTable = {}
 local lightCounter = 0
@@ -80,27 +106,27 @@ end
 
 local function add_new_light(lTable, createSpotLight, lightNo)
 	local componentToCreate = ternary(createSpotLight, "via.render.SpotLight", "via.render.PointLight")
-    local newLight = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
-	local lightProps = lua_find_component(newLight, componentToCreate)
+    local lightGameObject = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
+	local lightComponent = lua_find_component(lightGameObject, componentToCreate)
 	
-    lightProps:call("set_Enabled", true)
-    lightProps:call("set_Color", Vector3f.new(1, 1, 1))
-    lightProps:call("set_Intensity", 1000.0)
-	lightProps:call("set_ImportantLevel", 0)
-	lightProps:call("set_BlackBodyRadiation", false)
-	lightProps:call("set_UsingSameIntensity", false)
-	lightProps:call("set_BackGroundShadowEnable", false)
-    lightProps:call("set_ShadowEnable", true)
-	lightProps:call("set_ShadowBias", 0.000001)
-	lightProps:call("set_ShadowVariance", 0)
+    lightComponent:call("set_Enabled", true)
+    lightComponent:call("set_Color", Vector3f.new(1, 1, 1))
+    lightComponent:call("set_Intensity", 1000.0)
+	lightComponent:call("set_ImportantLevel", 0)
+	lightComponent:call("set_BlackBodyRadiation", false)
+	lightComponent:call("set_UsingSameIntensity", false)
+	lightComponent:call("set_BackGroundShadowEnable", false)
+    lightComponent:call("set_ShadowEnable", true)
+	lightComponent:call("set_ShadowBias", 0.000001)
+	lightComponent:call("set_ShadowVariance", 0)
 
-    move_light_to_camera(newLight)
-	lightProps:call("update")
+    move_light_to_camera(lightGameObject)
+	lightComponent:call("update")
 	
     lightTableEntry = {
 		id = lightNo,
-        light = newLight,
-        lightProps = lightProps,
+        lightGameObject = lightGameObject,
+        lightComponent = lightComponent,
         showLightEditor = false,
         attachedToCam = false,
 		typeDescription = ternary(createSpotLight, "Spotlight ", "Pointlight "),
@@ -121,46 +147,56 @@ local function ui_margin()
 	imgui.same_line()
 end
 
-local function handle_float_value(lightProps, captionString, getterFuncName, setterFuncName, stepSize, min, max)
+local function handle_float_value(lightComponent, captionString, getterFuncName, setterFuncName, stepSize, min, max)
 	ui_margin()
-	changed, newValue = imgui.drag_float(captionString, lightProps:call(getterFuncName), stepSize, min, max)
-	if changed then lightProps:call(setterFuncName, newValue) end
+	changed, newValue = imgui.drag_float(captionString, lightComponent:call(getterFuncName), stepSize, min, max)
+	if changed then lightComponent:call(setterFuncName, newValue) end
 end
 
-local function handle_bool_value(lightProps, captionString, getterFuncName, setterFuncName)
+local function handle_bool_value(lightComponent, captionString, getterFuncName, setterFuncName)
 	ui_margin()
-	changed, enabledValue = imgui.checkbox(captionString, lightProps:call(getterFuncName))
-	if changed then lightProps:call(setterFuncName, enabledValue) end
+	changed, enabledValue = imgui.checkbox(captionString, lightComponent:call(getterFuncName))
+	if changed then lightComponent:call(setterFuncName, enabledValue) end
 end
 
-local function sliders_change_pos(object)
-    local objectTransform = object:call("get_Transform")
-    local objectPos = objectTransform:call("get_Position")
+local function sliders_change_pos(lightGameObject)
+    local lightGameObjectTransform = lightGameObject:call("get_Transform")
+    local lightGameObjectPos = lightGameObjectTransform:get_position()
+	local lightGameObjectAngles = lightGameObjectTransform:call("get_EulerAngle")
+	
+	if imgui.tree_node("Position / orientation") then
+		-- X is right, Y is up, Z is out of the screen
+		ui_margin()
+		changedX, newXValue = imgui.drag_float("X (right)", lightGameObjectPos.x, 0.01, -10000, 10000)
+		ui_margin()
+		changedY, newYValue = imgui.drag_float("Y (up)", lightGameObjectPos.y, 0.01, -10000, 10000)
+		ui_margin()
+		changedZ, newZValue = imgui.drag_float("Z (out of the screen)", lightGameObjectPos.z, 0.01, -10000, 10000)
 
-	imgui.spacing()
-	ui_margin()
-
-	imgui.text("Position")
-	-- For some reason the z coordinate of the object isn't the height?
-	ui_margin()
-    changedX, newXValue = imgui.drag_float("X", objectPos.x, 0.01, -10000, 10000)
-	ui_margin()
-    changedZ, newZValue = imgui.drag_float("Y", objectPos.z, 0.01, -10000, 10000)
-	ui_margin()
-	changedY, newYValue = imgui.drag_float("Z", objectPos.y, 0.01, -10000, 10000)
-
-	imgui.spacing()
-
+		ui_margin()
+		changedPitch, newPitchValue = imgui.drag_float("Pitch", lightGameObjectAngles.x, 0.001, -3.1415924, 3.1415924)
+		ui_margin()
+		changedYaw, newYawValue = imgui.drag_float("Yaw", lightGameObjectAngles.y, 0.001, -3.1415924, 3.1415924)
+		imgui.tree_pop()
+	end
     if changedX or changedY or changedZ then
-        if not changedX then newXValue = objectPos.x end
-        if not changedY then newYValue = objectPos.y end
-        if not changedZ then newZValue = objectPos.z end
-        objectTransform:set_position(Vector3f.new(newXValue, newYValue, newZValue))
+        if not changedX then newXValue = lightGameObjectPos.x end
+        if not changedY then newYValue = lightGameObjectPos.y end
+        if not changedZ then newZValue = lightGameObjectPos.z end
+        lightGameObjectTransform:set_position(Vector3f.new(newXValue, newYValue, newZValue))
     end
+	
+	if changedPitch or changedYaw then
+		if not changedPitch then newPitchValue = lightGameObjectAngles.x end
+		if not changedYaw then newYawValue = lightGameObjectAngles.y end
+		lightGameObjectTransform:call("set_EulerAngle", Vector3f.new(newPitchValue, newYawValue, lightGameObjectAngles.z))
+		-- now grab the local matrix and write that as the world matrix, as the world matrix isn't updated but the local matrix is (and they should be the same)
+		write_mat4(lightGameObjectTransform, 0x80, lightGameObjectTransform:call("get_LocalMatrix"))
+	end
 end
 
 function main_menu()
-	if imgui.tree_node("RELit") then
+	if imgui.tree_node("RELit v"..relitVersion) then
 
 		if imgui.button("Add new spotlight") then 
 			add_new_light(lightsTable, true, get_new_light_no())
@@ -170,16 +206,14 @@ function main_menu()
 			add_new_light(lightsTable, false, get_new_light_no())
 		end
 
-		imgui.spacing()
-
 		for i, lightEntry in ipairs(lightsTable) do
-			local light = lightEntry.light
-			local lightProps = lightEntry.lightProps
+			local lightGameObject = lightEntry.lightGameObject
+			local lightComponent = lightEntry.lightComponent
 
 			imgui.push_id(lightEntry.id)
-			local changed, enabledValue = imgui.checkbox("", lightProps:call("get_Enabled"))
+			local changed, enabledValue = imgui.checkbox("", lightComponent:call("get_Enabled"))
 			if changed then
-				lightProps:call("set_Enabled", enabledValue)
+				lightComponent:call("set_Enabled", enabledValue)
 			end
 
 			imgui.same_line()
@@ -188,7 +222,7 @@ function main_menu()
 			imgui.same_line()
 
 			if imgui.button("Move To Camera") then 
-				move_light_to_camera(light)
+				move_light_to_camera(lightGameObject)
 			end
 
 			imgui.same_line()
@@ -207,7 +241,7 @@ function main_menu()
 			imgui.same_line()
 
 			if imgui.button("Delete") then 
-				light:call("destroy", light)
+				lightGameObject:call("destroy", lightGameObject)
 				table.remove(lightsTable, i)
 			end
 
@@ -215,21 +249,22 @@ function main_menu()
 		end
 
 		imgui.text(" ")
+		imgui.text("--------------------------------------------")
+		imgui.text("RELit is (c) Originalnicodr & Otis_Inf")
+		imgui.text("https://framedsc.com")
 		imgui.text(" ")
 		imgui.tree_pop()
 	end
 end
 
-re.on_draw_ui(main_menu)
-
 --Light Editor window UI-------------------------------------------------------
 function light_editor_menu()
 	for i, lightEntry in ipairs(lightsTable) do
-		local light = lightEntry.light
-		local lightProps = lightEntry.lightProps
+		local lightGameObject = lightEntry.lightGameObject
+		local lightComponent = lightEntry.lightComponent
 
 		if lightEntry.attachedToCam then
-			move_light_to_camera(light)
+			move_light_to_camera(lightGameObject)
 		end
 
         if lightEntry.showLightEditor then
@@ -237,56 +272,57 @@ function light_editor_menu()
 			imgui.push_id(lightEntry.id)
             lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 64)
 
-            sliders_change_pos(light)
+            sliders_change_pos(lightGameObject)
 
-			handle_float_value(lightProps, "Intensity", "get_Intensity", "set_Intensity", 1, 0, 100000)
+			if imgui.tree_node("Light characteristics") then
+				handle_float_value(lightComponent, "Intensity", "get_Intensity", "set_Intensity", 1, 0, 100000)
 
-			imgui.spacing()
-			ui_margin()
+				imgui.spacing()
+				ui_margin()
+				
+				changed, new_color = imgui.color_picker3("Light color", lightComponent:call("get_Color"))
+				if changed then
+					lightComponent:call("set_Color", new_color)
+				end
+
+				imgui.spacing()
+
+				if gameName~="dmc5" then
+					-- temperature settings don't work for some reason in DMC5
+					handle_bool_value(lightComponent, "Use temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
+					handle_float_value(lightComponent, "Temperature", "get_Temperature", "set_Temperature", 10, 1000, 20000)
+				end
+				handle_float_value(lightComponent, "Bounce intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
+				handle_float_value(lightComponent, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0)
+				handle_float_value(lightComponent, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10)
+				handle_float_value(lightComponent, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
+				handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000)
+				handle_float_value(lightComponent, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000)
+
+				if lightEntry.isSpotLight then
+					handle_float_value(lightComponent, "Cone", "get_Cone", "set_Cone", 0.01, 0, 1000)
+					handle_float_value(lightComponent, "Spread", "get_Spread", "set_Spread", 0.01, 0, 100)
+					handle_float_value(lightComponent, "Falloff", "get_Falloff", "set_Falloff", 0.01, 0, 100)
+				end
+				
+				imgui.tree_pop()
+			end
 			
-			changed, new_color = imgui.color_picker3("Light color", lightProps:call("get_Color"))
-			if changed then
-				lightProps:call("set_Color", new_color)
+			if imgui.tree_node("Shadow settings") then
+				imgui.spacing()
+				handle_bool_value(lightComponent, "Enable shadows", "get_ShadowEnable", "set_ShadowEnable")
+				handle_float_value(lightComponent, "Shadow bias", "get_ShadowBias", "set_ShadowBias", 0.0000001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow lod bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0000001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0000001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow slope bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0000001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.00001, 0, 1.0)
+
+				if lightEntry.isSpotLight then
+					handle_float_value(lightComponent, "Detail shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)
+				end 
+				imgui.tree_pop()
 			end
-
-			imgui.spacing()
-
-			if gameName~="dmc5" then
-				-- temperature settings don't work for some reason in DMC5
-				handle_bool_value(lightProps, "Use temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
-				handle_float_value(lightProps, "Temperature", "get_Temperature", "set_Temperature", 100, 1000, 20000)
-			end
-			handle_float_value(lightProps, "Bounce intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
-			handle_float_value(lightProps, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0)
-			handle_float_value(lightProps, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10)
-			handle_float_value(lightProps, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
-
-			-- Have no idea what this is
-			--changed, newValue = imgui.drag_float("Unit", lightProps:call("get_Unit"), 0.01, 0, 100000)
-			--if changed then lightProps:call("set_Unit", newValue) end
-
-			handle_float_value(lightProps, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000)
-			handle_float_value(lightProps, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000)
-
-			if lightEntry.isSpotLight then
-				handle_float_value(lightProps, "Cone", "get_Cone", "set_Cone", 0.01, 0, 1000)
-				handle_float_value(lightProps, "Spread", "get_Spread", "set_Spread", 0.01, 0, 100)
-				handle_float_value(lightProps, "Falloff", "get_Falloff", "set_Falloff", 0.01, 0, 100)
-			end
-			
-			imgui.spacing()
-
-			handle_bool_value(lightProps, "Enable shadows", "get_ShadowEnable", "set_ShadowEnable")
-			handle_float_value(lightProps, "Shadow bias", "get_ShadowBias", "set_ShadowBias", 0.0000001, 0, 1.0)
-			handle_float_value(lightProps, "Shadow blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0)
-			handle_float_value(lightProps, "Shadow lod bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0000001, 0, 1.0)
-			handle_float_value(lightProps, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0000001, 0, 1.0)
-			handle_float_value(lightProps, "Shadow slope bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0000001, 0, 1.0)
-			handle_float_value(lightProps, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.00001, 0, 1.0)
-
-			if lightEntry.isSpotLight then
-				handle_float_value(lightProps, "Detail shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)
-			end 
 			
 			imgui.spacing()
 			imgui.text(" ")
@@ -298,9 +334,10 @@ function light_editor_menu()
 
             imgui.end_window()
 			imgui.pop_id()
-			lightProps:call("update")
+			lightComponent:call("update")
         end
     end
 end
 
+re.on_draw_ui(main_menu)
 re.on_frame(light_editor_menu)

@@ -27,17 +27,25 @@
 
 -----------Global Constants-----------
 
-local relitVersion = "1.1"
+local relitVersion = "1.11"
 
 local lightsTable = {}
 local lightCounter = 0
 local gameName = reframework:get_game_name()
 
+-- light setting defaults
+local intensityDefault = 1000.0
+local colorDefault = Vector3f.new(1, 1, 1)
+local shadowBiasDefault = 0.00050
+local shadowDepthBiasDefault = 0.001
+local shadowSlopeBiasDefault = 0.000055
+
 local sceneLights = {}
 
 local customTonemapping = {
 	autoExposure = true,
-	exposure = 0
+	exposure = 0,
+	isInitialized = false
 }
 ---------------------------------------
 
@@ -140,19 +148,22 @@ local function add_new_light(lTable, createSpotLight, lightNo)
     local lightGameObject = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
 	local lightComponent = lua_find_component(lightGameObject, componentToCreate)
 	
+	local newLightIntensity = intensityDefault
+	if gameName == "re8" then
+		newLightIntensity = newLightIntensity * 10
+	end
     lightComponent:call("set_Enabled", true)
-    lightComponent:call("set_Color", Vector3f.new(1, 1, 1))
-    lightComponent:call("set_Intensity", 1000.0)
+    lightComponent:call("set_Color", colorDefault)
+    lightComponent:call("set_Intensity", newLightIntensity)
 	lightComponent:call("set_ImportantLevel", 0)
 	lightComponent:call("set_BlackBodyRadiation", false)
 	lightComponent:call("set_UsingSameIntensity", false)
 	lightComponent:call("set_BackGroundShadowEnable", false)
     lightComponent:call("set_ShadowEnable", true)
-	lightComponent:call("set_ShadowBias", 0.000500)
+	lightComponent:call("set_ShadowBias", shadowBiasDefault)
 	lightComponent:call("set_ShadowVariance", 0)
-	lightComponent:call("set_ShadowDepthBias", 0.001)
-	lightComponent:call("set_ShadowSlopeBias", 0.000055)
-	lightComponent:call("set_ShadowNearPlane", 3)
+	lightComponent:call("set_ShadowDepthBias", shadowDepthBiasDefault)
+	lightComponent:call("set_ShadowSlopeBias", shadowSlopeBiasDefault)
 
     move_light_to_camera(lightGameObject)
 	lightComponent:call("update")
@@ -184,15 +195,21 @@ local function get_scene_lights()
 	if tostring(transforms):find("SystemArray") and sdk.is_managed_object(transforms) then 
 		
 		for i, xform in ipairs(transforms) do 
-			local gameobj = xform:call("get_GameObject")
+			local gameObject = xform:call("get_GameObject")
 
-			local component = get_component_by_type(gameobj,"via.render.Light")
+			local isSpotLight = true
+			local component = get_component_by_type(gameObject,"via.render.SpotLight")
+			if component == nil then
+				isSpotLight = false
+				component = get_component_by_type(gameObject, "via.render.PointLight")
+			end
+			
 			if not (component == nil) then
 				
 				entry = {
 					lightComponent = component,
-					lightGameObject = gameobj,
-					name = gameobj:call("get_Name"),
+					lightGameObject = gameObject,
+					name = gameObject:call("get_Name")..ternary(isSpotLight, " (SpotLight)", " (PointLight)"),
 					isEnabled = component:call("get_Enabled")
 				}
 				table.insert(sceneLights, entry)
@@ -289,7 +306,9 @@ local function scene_lights_menu()
 			
 			local changed, enabledValue = imgui.checkbox("", entry.isEnabled)
 			if changed then
-				entry.isEnabled = false
+				entry.lightGameObject:write_dword(0x12, 16843009)
+				entry.lightGameObject:write_byte(0x13, ternary(enabledValue, 1, 0))
+				entry.isEnabled = enabledValue
 			end
 
 			imgui.same_line()
@@ -307,15 +326,12 @@ local function tonemapping_menu()
 		local cameraGameObject = camera:call("get_GameObject")
 		local toneMapping = get_component_by_type(cameraGameObject,"via.render.ToneMapping")
 
-
 		changed, enabledValue = imgui.checkbox("Auto Exposure", customTonemapping.autoExposure)
 		if changed and enabledValue then customTonemapping.autoExposure = true end
 		if changed and not enabledValue then customTonemapping.autoExposure = false end
 
-
-		changed, newValue = imgui.drag_float("Exposure", customTonemapping.exposure, 0.01, -5, 5)
+		changed, newValue = imgui.drag_float("Exposure", customTonemapping.exposure, 0.01, -5, 25)
 		if changed then customTonemapping.exposure = newValue end
-
 
 		imgui.tree_pop()
 	end
@@ -417,7 +433,7 @@ function light_editor_menu()
             sliders_change_pos(lightGameObject)
 
 			if imgui.tree_node("Light characteristics") then
-				handle_float_value(lightComponent, "Intensity", "get_Intensity", "set_Intensity", 1, 0, 100000)
+				handle_float_value(lightComponent, "Intensity", "get_Intensity", "set_Intensity", 10, 0, 500000)
 
 				imgui.spacing()
 				ui_margin()
@@ -453,12 +469,12 @@ function light_editor_menu()
 			if imgui.tree_node("Shadow settings") then
 				imgui.spacing()
 				handle_bool_value(lightComponent, "Enable shadows", "get_ShadowEnable", "set_ShadowEnable")
-				handle_float_value(lightComponent, "Shadow bias", "get_ShadowBias", "set_ShadowBias", 0.0000001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow bias", "get_ShadowBias", "set_ShadowBias", 0.000001, 0, 1.0)
 				handle_float_value(lightComponent, "Shadow blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0)
 				handle_float_value(lightComponent, "Shadow lod bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0000001, 0, 1.0)
-				handle_float_value(lightComponent, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0000001, 0, 1.0)
+				handle_float_value(lightComponent, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.00001, 0, 1.0)
 				handle_float_value(lightComponent, "Shadow slope bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0000001, 0, 1.0)
-				handle_float_value(lightComponent, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.00001, 0, 5.0)
+				handle_float_value(lightComponent, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.001, 0, 5.0)
 
 				if lightEntry.isSpotLight then
 					handle_float_value(lightComponent, "Detail shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)
@@ -492,10 +508,16 @@ re.on_frame(function()
 		lightComponent:call("set_Enabled", entry.isEnabled)
 	end
 
-	local camera = sdk.get_primary_camera()
-	local cameraGameObject = camera:call("get_GameObject")
-	local toneMapping = get_component_by_type(cameraGameObject,"via.render.ToneMapping")
+	camera = sdk.get_primary_camera()
+	cameraGameObject = camera:call("get_GameObject")
+	toneMapping = get_component_by_type(cameraGameObject,"via.render.ToneMapping")
 
+	if not customTonemapping.isInitialized then
+		customTonemapping.autoExposure = toneMapping:call("getAutoExposure")
+		customTonemapping.exposure = toneMapping:call("get_EV")
+		customTonemapping.isInitialized = true
+	end
+	
 	if not customTonemapping.autoExposure then
 		toneMapping:call("setAutoExposure", 2)
 		toneMapping:call("set_EV", customTonemapping.exposure)

@@ -40,8 +40,9 @@ creating a light. To delete a light, click on the 'Delete' button.
 FAQ
 --------
 
-Q: When I attach a spotlight to the camera and move it, or sometimes when I create a spotlight close to a character, it's mostly black or flickers
-A: This is an engine bug, it happens in some games and not in others. Try to move the light a bit so it shows properly
+Q: When I create a spotlight, I don't see any shadows!
+A: That's likely because the Shadow near plane value is too low/wrong. Go into the light editor and increase the Shadow near plane value to a 
+   higher value till you see the shadows appear and they look OK. 
 
 Q: When I create a light, there are often big stripes in the shadow!
 A: This is due to the default shadow bias. To correct the stripes, increase (or decrease) the shadow bias value till they're gone. 

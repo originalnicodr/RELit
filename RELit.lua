@@ -21,17 +21,20 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
+-- v1.11	- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
 -- v1.1		- Added tonemapping settings and updated some initial values
 -- v1.0		- First release
 --//////////////////////////////////////////////////////////////////////////////////////////////
 
------------Global Constants-----------
+-----------Globals and Constants-----------
+local DEBUG = false			-- set to true to enable debug controls and other debug code.
 
 local relitVersion = "1.11"
 
 local lightsTable = {}
 local lightCounter = 0
 local gameName = reframework:get_game_name()
+local mainWindowVisible = false
 
 -- light setting defaults
 local intensityDefault = 1000.0
@@ -41,6 +44,7 @@ local shadowDepthBiasDefault = 0.001
 local shadowSlopeBiasDefault = 0.000055
 
 local sceneLights = {}
+local switchedOnOffSceneLights = {}
 
 local customTonemapping = {
 	autoExposure = true,
@@ -120,8 +124,8 @@ local function write_mat4(managedObject, offset, mat4)
 	end
 end
 
-local function move_light_to_camera(light)
-    local lightTransform = light:call("get_Transform")
+local function move_light_to_camera(lightGameObject)
+    local lightTransform = lightGameObject:call("get_Transform")
     local camera = sdk.get_primary_camera()
 	local cameraObject = camera:call("get_GameObject")
 	local cameraTransform = cameraObject:call("get_Transform")
@@ -142,8 +146,7 @@ end
 
 ------------------------------------------
 
-
-local function add_new_light(lTable, createSpotLight, lightNo)
+local function add_new_light(createSpotLight, lightNo)
 	local componentToCreate = ternary(createSpotLight, "via.render.SpotLight", "via.render.PointLight")
     local lightGameObject = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
 	local lightComponent = lua_find_component(lightGameObject, componentToCreate)
@@ -179,7 +182,28 @@ local function add_new_light(lTable, createSpotLight, lightNo)
 		showGizmo = false
     }
 
-    table.insert( lTable, lightTableEntry )
+    table.insert(lightsTable, lightTableEntry )
+end
+
+local function switch_on_scene_lights()
+	for i, lightEntry in ipairs(switchedOnOffSceneLights) do
+		local lightGameObject = lightEntry.lightGameObject
+		lightEntry.isEnabled = true
+		lightGameObject:write_byte(0x13, 1)
+	end
+	-- clear the table. Holy moly this language is ... limited
+	for k,v in pairs(switchedOnOffSceneLights) do switchedOnOffSceneLights[k]=nil end
+end
+
+local function switch_off_scene_lights()
+	for i, lightEntry in ipairs(sceneLights) do
+		if lightEntry.isEnabled then
+			lightEntry.isEnabled = false
+			local lightGameObject = lightEntry.lightGameObject
+			lightGameObject:write_byte(0x13, 0)
+			table.insert(switchedOnOffSceneLights, lightEntry)
+		end
+	end
 end
 
 local function get_scene_lights()
@@ -193,33 +217,56 @@ local function get_scene_lights()
 	local sceneLights = {}
 		
 	if tostring(transforms):find("SystemArray") and sdk.is_managed_object(transforms) then 
-		
 		for i, xform in ipairs(transforms) do 
 			local gameObject = xform:call("get_GameObject")
-
-			local isSpotLight = true
+			local lightType = " (SpotLight)"
+			-- why would anyone want to use a switch/case statement.... 
 			local component = get_component_by_type(gameObject,"via.render.SpotLight")
 			if component == nil then
-				isSpotLight = false
 				component = get_component_by_type(gameObject, "via.render.PointLight")
+				if component == nil then
+					component = get_component_by_type(gameObject, "via.render.AreaLight")
+					if component == nil then
+						component = get_component_by_type(gameObject, "via.render.DirectionalLight")
+						if component == nil then
+							component = get_component_by_type(gameObject, "via.render.ProjectionSpotLight")
+							if component == nil then
+								component = get_component_by_type(gameObject, "via.render.SkyLight")
+								if component == nil then
+									component = get_component_by_type(gameObject, "via.render.Light")
+									if component ~= nil then
+										lightType = " (Light)"
+									end
+								else
+									lightType = " (SkyLight)"
+								end
+							else
+								lightType = " (ProjectionSpotLight)"
+							end
+						else
+							lightType = " (DirectionalLight)"
+						end
+					else
+						lightType = " (AreaLight)"
+					end
+				else
+					lightType = " (PointLight)"
+				end
 			end
 			
 			if component ~= nil then
-				
 				sceneLightsEntry = {
 					id = i,
 					lightComponent = component,
 					lightGameObject = gameObject,
-					name = gameObject:call("get_Name")..ternary(isSpotLight, " (SpotLight)", " (PointLight)"),
+					name = gameObject:call("get_Name")..lightType,
 					isEnabled = component:call("get_Enabled")
 				}
 				table.insert(sceneLights, sceneLightsEntry)
 			end
 		end
 	end
-
 	return sceneLights
-
 end
 
 --UI---------------------------------------------------------
@@ -294,11 +341,29 @@ local function sliders_change_pos(lightGameObject)
 	end
 end
 
---WIP--
 local function scene_lights_menu()
 	if imgui.tree_node("Scene Lights") then
-		if imgui.button("Update scene lights") then 
-			sceneLights = get_scene_lights()
+		-- first check if we've switched off all lights. If so, we can't update the scene lights till we switch them back on.
+		local showUpdateSceneLightsButton = switchedOnOffSceneLights[1]== nil
+		if showUpdateSceneLightsButton then
+			if imgui.button("Update scene lights") then 
+				sceneLights = get_scene_lights()
+			end
+		end
+		
+		if sceneLights[1] then
+			if showUpdateSceneLightsButton then
+				imgui.same_line()
+			end
+
+			local hasBulkSwitchedOffLights = (switchedOnOffSceneLights[1]~=nil)
+			if imgui.button(ternary(hasBulkSwitchedOffLights, "Switch scene lights back on", "Switch off scene lights")) then
+				if hasBulkSwitchedOffLights then
+					switch_on_scene_lights()
+				else
+					switch_off_scene_lights()
+				end
+			end
 		end
 		
 		for i, sceneLightsEntry in ipairs(sceneLights) do 
@@ -337,7 +402,7 @@ local function tonemapping_menu()
 		local camera = sdk.get_primary_camera()
 		local cameraGameObject = camera:call("get_GameObject")
 		local toneMapping = get_component_by_type(cameraGameObject,"via.render.ToneMapping")
-
+		
 		changed, enabledValue = imgui.checkbox("Auto Exposure", customTonemapping.autoExposure)
 		if changed and enabledValue then customTonemapping.autoExposure = true end
 		if changed and not enabledValue then customTonemapping.autoExposure = false end
@@ -349,64 +414,64 @@ local function tonemapping_menu()
 	end
 end
 
-function main_menu()
-	if imgui.collapsing_header("RELit v"..relitVersion) then
-
-		if imgui.tree_node("Lights") then
-			if imgui.button("Add new spotlight") then 
-				add_new_light(lightsTable, true, get_new_light_no())
-			end
-			imgui.same_line()
-			if imgui.button("Add new pointlight") then 
-				add_new_light(lightsTable, false, get_new_light_no())
-			end
-
-			for i, lightEntry in ipairs(lightsTable) do
-				local lightGameObject = lightEntry.lightGameObject
-				local lightComponent = lightEntry.lightComponent
-
-				imgui.push_id(lightEntry.id)
-				local changed, enabledValue = imgui.checkbox("", lightComponent:call("get_Enabled"))
-				if changed then
-					lightComponent:call("set_Enabled", enabledValue)
-				end
-
-				imgui.same_line()
-
-				imgui.text(lightEntry.typeDescription..tostring(i))
-				imgui.same_line()
-
-				if imgui.button("Move To Camera") then 
-					move_light_to_camera(lightGameObject)
-				end
-
-				imgui.same_line()
-
-				local changed, attachedToCamValue = imgui.checkbox("Attach to camera", lightEntry.attachedToCam)
-				if changed then
-					lightEntry.attachedToCam = attachedToCamValue
-				end
-
-				imgui.same_line()
-
-				if imgui.button(" Edit ") then
-					lightEntry.showLightEditor = true
-				end
-
-				imgui.same_line()
-
-				if imgui.button("Delete") then 
-					lightGameObject:call("destroy", lightGameObject)
-					table.remove(lightsTable, i)
-				end
-
-				imgui.pop_id()
-			end
-			imgui.tree_pop()
+local function lights_menu()
+	if imgui.tree_node("Lights") then
+		if imgui.button("Add new spotlight") then 
+			add_new_light(true, get_new_light_no())
+		end
+		imgui.same_line()
+		if imgui.button("Add new pointlight") then 
+			add_new_light(false, get_new_light_no())
 		end
 
-		scene_lights_menu()
+		for i, lightEntry in ipairs(lightsTable) do
+			local lightGameObject = lightEntry.lightGameObject
+			local lightComponent = lightEntry.lightComponent
 
+			imgui.push_id(lightEntry.id)
+			local changed, enabledValue = imgui.checkbox("", lightComponent:call("get_Enabled"))
+			if changed then
+				lightComponent:call("set_Enabled", enabledValue)
+			end
+
+			imgui.same_line()
+			imgui.text(lightEntry.typeDescription..tostring(i))
+
+			imgui.same_line()
+			if imgui.button(" Edit ") then
+				lightEntry.showLightEditor = true
+			end
+
+			imgui.same_line()
+			if imgui.button("Move To Camera") then 
+				move_light_to_camera(lightGameObject)
+			end
+
+			imgui.same_line()
+			local changed, attachedToCamValue = imgui.checkbox("Attach to camera", lightEntry.attachedToCam)
+			if changed then
+				lightEntry.attachedToCam = attachedToCamValue
+			end
+
+			imgui.same_line()
+			if imgui.button("Delete") then 
+				lightGameObject:call("destroy", lightGameObject)
+				table.remove(lightsTable, i)
+			end
+			
+			imgui.pop_id()
+		end
+		imgui.tree_pop()
+	end
+end
+
+function main_menu()
+	if mainWindowVisible then 
+		imgui.set_next_window_size(Vector2f.new(600, 300), 4)		-- first use ever
+		mainWindowVisible = imgui.begin_window("RELit v"..relitVersion, mainWindowVisible, nil)
+		
+		lights_menu()
+		scene_lights_menu()
 		tonemapping_menu()
 
 		imgui.text(" ")
@@ -418,6 +483,7 @@ function main_menu()
 		imgui.text("https://framedsc.com")
 		ui_margin()
 	end
+	imgui.end_window()
 end
 
 --Light Editor window UI-------------------------------------------------------
@@ -432,27 +498,30 @@ function light_editor_menu()
 
         if lightEntry.showLightEditor then
 			imgui.push_id(lightEntry.id)
-            lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 64)
+			imgui.set_next_window_size(Vector2f.new(400, 600), 2)		-- Once
+            lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 0)
 
-			imgui.spacing()
-			ui_margin()
-			changed, enabledValue = imgui.checkbox(captionString, lightEntry.showGizmo)
-			if changed then lightEntry.showGizmo = enabledValue end
-			imgui.same_line()
-			imgui.text("Draw debug gizmo")
+			if DEBUG then
+				imgui.spacing()
+				ui_margin()
+				changed, enabledValue = imgui.checkbox(captionString, lightEntry.showGizmo)
+				if changed then lightEntry.showGizmo = enabledValue end
+				imgui.same_line()
+				imgui.text("Draw debug gizmo")
 
-			if imgui.tree_node("Debug") then
-				if imgui.tree_node("Light component") then
-					object_explorer:handle_address(lightComponent)
+				if imgui.tree_node("Debug") then
+					if imgui.tree_node("Light component") then
+						object_explorer:handle_address(lightComponent)
+						imgui.tree_pop()
+					end
+					if imgui.tree_node("Light game object") then
+						object_explorer:handle_address(lightGameObject)
+						imgui.tree_pop()
+					end
 					imgui.tree_pop()
 				end
-				if imgui.tree_node("Light game object") then
-					object_explorer:handle_address(lightGameObject)
-					imgui.tree_pop()
-				end
-				imgui.tree_pop()
 			end
-
+			
             sliders_change_pos(lightGameObject)
 
 			if imgui.tree_node("Light characteristics") then
@@ -476,7 +545,10 @@ function light_editor_menu()
 				handle_float_value(lightComponent, "Bounce intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
 				handle_float_value(lightComponent, "Min roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0)
 				handle_float_value(lightComponent, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10)
-				handle_float_value(lightComponent, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
+				if gameName~="dmc5" then
+					-- volumetric scattering intensity always reverts to 0 in DMC5. In most other games it has little/no effect either but we'll disable it for DMC5 only for now.
+					handle_float_value(lightComponent, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
+				end
 				handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000)
 				handle_float_value(lightComponent, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000)
 
@@ -516,15 +588,25 @@ function light_editor_menu()
             imgui.end_window()
 			imgui.pop_id()
 
-
 			lightComponent:call("update")
         end
     end
 end
 
-re.on_draw_ui(main_menu)
-re.on_frame(function()
+local function render_reFramework_ui()
+	changed, showWindow = imgui.checkbox("Show RELit UI", mainWindowVisible)
+	if changed then
+		mainWindowVisible = showWindow
+	end
+	
+	if mainWindowVisible then
+		main_menu()
+	end
+end
 
+re.on_draw_ui(render_reFramework_ui)
+
+re.on_frame(function()
 	--Update values that get reset every frame
 	for i, entry in ipairs(sceneLights) do 
 		lightComponent = entry.lightComponent

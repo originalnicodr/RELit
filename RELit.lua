@@ -204,15 +204,16 @@ local function get_scene_lights()
 				component = get_component_by_type(gameObject, "via.render.PointLight")
 			end
 			
-			if not (component == nil) then
+			if component ~= nil then
 				
-				entry = {
+				sceneLightsEntry = {
+					id = i,
 					lightComponent = component,
 					lightGameObject = gameObject,
 					name = gameObject:call("get_Name")..ternary(isSpotLight, " (SpotLight)", " (PointLight)"),
 					isEnabled = component:call("get_Enabled")
 				}
-				table.insert(sceneLights, entry)
+				table.insert(sceneLights, sceneLightsEntry)
 			end
 		end
 	end
@@ -300,20 +301,31 @@ local function scene_lights_menu()
 			sceneLights = get_scene_lights()
 		end
 		
-		
-		for i, entry in ipairs(sceneLights) do 
-			lightComponent = entry.lightComponent
+		for i, sceneLightsEntry in ipairs(sceneLights) do 
+			local lightComponent = sceneLightsEntry.lightComponent
+			local lightGameObject = sceneLightsEntry.lightGameObject
 			
-			local changed, enabledValue = imgui.checkbox("", entry.isEnabled)
+			imgui.push_id(sceneLightsEntry.id)
+			local isEnabled = sceneLightsEntry.isEnabled			-- we need to do it this way otherwise Lua throws an error if we directly write the imgui.checkbox value into entry.isenabled
+			local changed, isEnabled = imgui.checkbox("", isEnabled)
 			if changed then
-				entry.lightGameObject:write_dword(0x12, 16843009)
-				entry.lightGameObject:write_byte(0x13, ternary(enabledValue, 1, 0))
-				entry.isEnabled = enabledValue
+				sceneLightsEntry.isEnabled = isEnabled
+				lightGameObject:write_byte(0x13, ternary(sceneLightsEntry.isEnabled, 1, 0))
 			end
 
 			imgui.same_line()
-
-			imgui.text(entry.name)
+			if imgui.tree_node(sceneLightsEntry.name) then
+				if imgui.tree_node("Light component") then
+					object_explorer:handle_address(lightComponent)
+					imgui.tree_pop()
+				end
+				if imgui.tree_node("Light game object") then
+					object_explorer:handle_address(lightGameObject)
+					imgui.tree_pop()
+				end
+				imgui.tree_pop()
+			end
+			imgui.pop_id()
 		end
 
 		imgui.tree_pop()
@@ -393,7 +405,7 @@ function main_menu()
 			imgui.tree_pop()
 		end
 
-		--scene_lights_menu()
+		scene_lights_menu()
 
 		tonemapping_menu()
 
@@ -429,6 +441,17 @@ function light_editor_menu()
 			imgui.same_line()
 			imgui.text("Draw debug gizmo")
 
+			if imgui.tree_node("Debug") then
+				if imgui.tree_node("Light component") then
+					object_explorer:handle_address(lightComponent)
+					imgui.tree_pop()
+				end
+				if imgui.tree_node("Light game object") then
+					object_explorer:handle_address(lightGameObject)
+					imgui.tree_pop()
+				end
+				imgui.tree_pop()
+			end
 
             sliders_change_pos(lightGameObject)
 

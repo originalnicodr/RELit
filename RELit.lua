@@ -21,6 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
+-- v1.12	- Filtered our lights from the scene lights list and added a new button to copy light properties into a new light
 -- v1.11	- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
 -- v1.1		- Added tonemapping settings and updated some initial values
 -- v1.0		- First release
@@ -29,7 +30,7 @@
 -----------Globals and Constants-----------
 local DEBUG = false			-- set to true to enable debug controls and other debug code.
 
-local relitVersion = "1.11"
+local relitVersion = "1.12"
 
 local lightsTable = {}
 local lightCounter = 0
@@ -145,28 +146,43 @@ local function get_new_light_no()
 end
 
 ------------------------------------------
-
-local function add_new_light(createSpotLight, lightNo)
+local function add_new_light(createSpotLight, lightNo, originalLight)
 	local componentToCreate = ternary(createSpotLight, "via.render.SpotLight", "via.render.PointLight")
-    local lightGameObject = create_gameobj(ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
+    local lightGameObject = create_gameobj("RELit - "..ternary(createSpotLight, "Spotlight ", "Pointlight ")..tostring(lightNo), {componentToCreate})
 	local lightComponent = lua_find_component(lightGameObject, componentToCreate)
 	
 	local newLightIntensity = intensityDefault
 	if gameName == "re8" then
 		newLightIntensity = newLightIntensity * 10
 	end
-    lightComponent:call("set_Enabled", true)
-    lightComponent:call("set_Color", colorDefault)
-    lightComponent:call("set_Intensity", newLightIntensity)
-	lightComponent:call("set_ImportantLevel", 0)
-	lightComponent:call("set_BlackBodyRadiation", false)
-	lightComponent:call("set_UsingSameIntensity", false)
-	lightComponent:call("set_BackGroundShadowEnable", false)
-    lightComponent:call("set_ShadowEnable", true)
-	lightComponent:call("set_ShadowBias", shadowBiasDefault)
-	lightComponent:call("set_ShadowVariance", 0)
-	lightComponent:call("set_ShadowDepthBias", shadowDepthBiasDefault)
-	lightComponent:call("set_ShadowSlopeBias", shadowSlopeBiasDefault)
+
+	lightComponent:call("set_Enabled", true)
+
+	if originalLight ~= nil then
+		lightComponent:call("set_Color", originalLight:call("get_Color"))
+		lightComponent:call("set_Intensity", originalLight:call("get_Intensity"))
+		lightComponent:call("set_ImportantLevel", originalLight:call("get_ImportantLevel"))
+		lightComponent:call("set_BlackBodyRadiation", originalLight:call("get_BlackBodyRadiation"))
+		lightComponent:call("set_UsingSameIntensity", originalLight:call("get_UsingSameIntensity"))
+		lightComponent:call("set_BackGroundShadowEnable", originalLight:call("get_BackGroundShadowEnable"))
+		lightComponent:call("set_ShadowEnable", originalLight:call("get_ShadowEnable"))
+		lightComponent:call("set_ShadowBias", originalLight:call("get_ShadowBias"))
+		lightComponent:call("set_ShadowVariance", originalLight:call("get_ShadowVariance"))
+		lightComponent:call("set_ShadowDepthBias", originalLight:call("get_ShadowDepthBias"))
+		lightComponent:call("set_ShadowSlopeBias", originalLight:call("get_ShadowSlopeBias"))
+	else
+		lightComponent:call("set_Color", colorDefault)
+		lightComponent:call("set_Intensity", newLightIntensity)
+		lightComponent:call("set_ImportantLevel", 0)
+		lightComponent:call("set_BlackBodyRadiation", false)
+		lightComponent:call("set_UsingSameIntensity", false)
+		lightComponent:call("set_BackGroundShadowEnable", false)
+		lightComponent:call("set_ShadowEnable", true)
+		lightComponent:call("set_ShadowBias", shadowBiasDefault)
+		lightComponent:call("set_ShadowVariance", 0)
+		lightComponent:call("set_ShadowDepthBias", shadowDepthBiasDefault)
+		lightComponent:call("set_ShadowSlopeBias", shadowSlopeBiasDefault)
+	end
 
     move_light_to_camera(lightGameObject)
 	lightComponent:call("update")
@@ -219,6 +235,10 @@ local function get_scene_lights()
 	if tostring(transforms):find("SystemArray") and sdk.is_managed_object(transforms) then 
 		for i, xform in ipairs(transforms) do 
 			local gameObject = xform:call("get_GameObject")
+			
+			-- lua doesnt have a continue statement...
+			if string.find(gameObject:call("get_Name"),"RELit") then goto continue end
+
 			local lightType = " (SpotLight)"
 			-- why would anyone want to use a switch/case statement.... 
 			local component = get_component_by_type(gameObject,"via.render.SpotLight")
@@ -264,6 +284,7 @@ local function get_scene_lights()
 				}
 				table.insert(sceneLights, sceneLightsEntry)
 			end
+			::continue::
 		end
 	end
 	return sceneLights
@@ -295,14 +316,14 @@ function draw_gizmo(gameObject)
     local mat = transform:call("get_WorldMatrix")
     local changed = false
 
-    changed, newMat = draw.gizmo(transform:get_address(), mat)
+    changed, newMat = draw.gizmo(gameObject:get_address(), mat)
 
     if changed then
         transform:set_rotation(newMat:to_quat())
         transform:set_position(newMat[3])
     end
 
-	draw.gizmo(transform:get_address(), newMat)
+	draw.gizmo(gameObject:get_address(), newMat)
 end
 
 local function sliders_change_pos(lightGameObject)
@@ -417,11 +438,11 @@ end
 local function lights_menu()
 	if imgui.tree_node("Lights") then
 		if imgui.button("Add new spotlight") then 
-			add_new_light(true, get_new_light_no())
+			add_new_light(true, get_new_light_no(), nil)
 		end
 		imgui.same_line()
 		if imgui.button("Add new pointlight") then 
-			add_new_light(false, get_new_light_no())
+			add_new_light(false, get_new_light_no(), nil)
 		end
 
 		for i, lightEntry in ipairs(lightsTable) do
@@ -451,6 +472,11 @@ local function lights_menu()
 			local changed, attachedToCamValue = imgui.checkbox("Attach to camera", lightEntry.attachedToCam)
 			if changed then
 				lightEntry.attachedToCam = attachedToCamValue
+			end
+
+			imgui.same_line()
+			if imgui.button("Copy") then 
+				add_new_light(lightEntry.isSpotLight, get_new_light_no(), lightEntry.lightComponent)
 			end
 
 			imgui.same_line()
@@ -502,12 +528,18 @@ function light_editor_menu()
             lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 0)
 
 			if DEBUG then
+
 				imgui.spacing()
 				ui_margin()
 				changed, enabledValue = imgui.checkbox(captionString, lightEntry.showGizmo)
 				if changed then lightEntry.showGizmo = enabledValue end
+
 				imgui.same_line()
-				imgui.text("Draw debug gizmo")
+				imgui.text("Draw debug gizmo")		
+
+				if lightEntry.showGizmo then
+					draw_gizmo(lightGameObject)
+				end
 
 				if imgui.tree_node("Debug") then
 					if imgui.tree_node("Light component") then

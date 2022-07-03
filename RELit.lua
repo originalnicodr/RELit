@@ -21,7 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
--- v1.13	- Fixed issue with scene lights not returning to their original specs when switching them off
+-- v1.13	- Fixed scene light issue where we switched lights off if they were enabled, but we should have first collected the drawn lights and used that set
 -- v1.12	- Filtered our lights from the scene lights list and added a new button to copy light properties into a new light
 -- v1.11	- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
 -- v1.1		- Added tonemapping settings and updated some initial values

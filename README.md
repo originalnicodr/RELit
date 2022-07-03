@@ -1,6 +1,6 @@
 # RELit
 
-<p align="center"><img src="Images/logo.png"></p>
+<p align="center"><img src="https://user-images.githubusercontent.com/24371572/177046952-45208d6f-edb2-4e6b-ba58-6b795053705c.png"></p>
 <p align="center"><a href="https://github.com/praydog/REFramework">
     <img src="https://img.shields.io/badge/REFramework-v1.190_c29f1c8-green.svg" alt="REFramework"></a></p>
 
@@ -73,7 +73,7 @@ Radiate light in all directions from a single point in 3D space. It's best used 
 ### **Spot lights**
 Shoot a cone of light in a specified direction, also from a single point in 3D space. This is best used for lighting portraits, as it can be aimed at certain parts of a face.
 
-## Light Properties
+# Light Properties
 
 ## Color picker / RGB / HSV / Hex
 Allows you to select the color of the light by changing the RGB, HSV, or HEX values, or by using the fancy color picker.

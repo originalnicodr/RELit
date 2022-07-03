@@ -21,6 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
+-- v1.13	- Fixed issue with scene lights not returning to their original specs when switching them off
 -- v1.12	- Filtered our lights from the scene lights list and added a new button to copy light properties into a new light
 -- v1.11	- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
 -- v1.1		- Added tonemapping settings and updated some initial values
@@ -30,7 +31,7 @@
 -----------Globals and Constants-----------
 local DEBUG = false			-- set to true to enable debug controls and other debug code.
 
-local relitVersion = "1.12"
+local relitVersion = "1.13"
 
 local lightsTable = {}
 local lightCounter = 0
@@ -201,11 +202,17 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
     table.insert(lightsTable, lightTableEntry )
 end
 
+
+local function switch_scene_light_onoff(lightGameObject, onOff)
+	lightGameObject:write_byte(0x13, onOff)
+end
+
 local function switch_on_scene_lights()
+	-- all entries in this table were switched off by us so they were on before, we just switch all of them back on.
 	for i, lightEntry in ipairs(switchedOnOffSceneLights) do
 		local lightGameObject = lightEntry.lightGameObject
 		lightEntry.isEnabled = true
-		lightGameObject:write_byte(0x13, 1)
+		switch_scene_light_onoff(lightGameObject, lightEntry.isDrawn)
 	end
 	-- clear the table. Holy moly this language is ... limited
 	for k,v in pairs(switchedOnOffSceneLights) do switchedOnOffSceneLights[k]=nil end
@@ -216,7 +223,7 @@ local function switch_off_scene_lights()
 		if lightEntry.isEnabled then
 			lightEntry.isEnabled = false
 			local lightGameObject = lightEntry.lightGameObject
-			lightGameObject:write_byte(0x13, 0)
+			switch_scene_light_onoff(lightGameObject, 0)
 			table.insert(switchedOnOffSceneLights, lightEntry)
 		end
 	end
@@ -275,14 +282,19 @@ local function get_scene_lights()
 			end
 			
 			if component ~= nil then
-				sceneLightsEntry = {
-					id = i,
-					lightComponent = component,
-					lightGameObject = gameObject,
-					name = gameObject:call("get_Name")..lightType,
-					isEnabled = component:call("get_Enabled")
-				}
-				table.insert(sceneLights, sceneLightsEntry)
+				local isEnabled = component:call("get_Enabled")
+				local isDrawn = gameObject:read_byte(0x13)
+				if isEnabled and isDrawn==1 then
+					sceneLightsEntry = {
+						id = i,
+						lightComponent = component,
+						lightGameObject = gameObject,
+						name = gameObject:call("get_Name")..lightType,
+						isEnabled = isEnabled,
+						isDrawn = isDrawn
+					}
+					table.insert(sceneLights, sceneLightsEntry)
+				end
 			end
 			::continue::
 		end
@@ -367,7 +379,7 @@ local function scene_lights_menu()
 		-- first check if we've switched off all lights. If so, we can't update the scene lights till we switch them back on.
 		local showUpdateSceneLightsButton = switchedOnOffSceneLights[1]== nil
 		if showUpdateSceneLightsButton then
-			if imgui.button("Update scene lights") then 
+			if imgui.button("Collect enabled scene lights") then 
 				sceneLights = get_scene_lights()
 			end
 		end
@@ -396,7 +408,7 @@ local function scene_lights_menu()
 			local changed, isEnabled = imgui.checkbox("", isEnabled)
 			if changed then
 				sceneLightsEntry.isEnabled = isEnabled
-				lightGameObject:write_byte(0x13, ternary(sceneLightsEntry.isEnabled, 1, 0))
+				switch_scene_light_onoff(lightGameObject, ternary(sceneLightsEntry.isEnabled, 1, 0))
 			end
 
 			imgui.same_line()

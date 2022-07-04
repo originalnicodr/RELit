@@ -57,7 +57,7 @@ local customTonemapping = {
 
 -----------Utility functions-----------
 
-function create_gameobj(name, component_names)
+local function create_gameobj(name, component_names)
     local newGameobj = sdk.find_type_definition("via.GameObject"):get_method("create(System.String)"):call(nil, name)
     if newGameobj and newGameobj:add_ref() and newGameobj:call(".ctor") then
         for i, compName in ipairs(component_names or {}) do 
@@ -95,7 +95,7 @@ local function get_component_by_type(game_object, type_name)
     return game_object:call("getComponent(System.Type)", t)
 end
 
-function dump(o)
+local function dump(o)
     if type(o) == 'table' then
        local s = '{ '
        for k,v in pairs(o) do
@@ -321,7 +321,7 @@ local function handle_bool_value(lightComponent, captionString, getterFuncName, 
 end
 
 --WIP--
-function draw_gizmo(gameObject)
+local function draw_gizmo(gameObject)
 	local transform = gameObject:call("get_Transform")
     if transform == nil then return end
 
@@ -503,7 +503,7 @@ local function lights_menu()
 	end
 end
 
-function main_menu()
+local function main_menu()
 	if mainWindowVisible then 
 		imgui.set_next_window_size(Vector2f.new(600, 300), 4)		-- first use ever
 		mainWindowVisible = imgui.begin_window("RELit v"..relitVersion, mainWindowVisible, nil)
@@ -525,7 +525,7 @@ function main_menu()
 end
 
 --Light Editor window UI-------------------------------------------------------
-function light_editor_menu()
+local function light_editor_menu()
 	for i, lightEntry in ipairs(lightsTable) do
 		local lightGameObject = lightEntry.lightGameObject
 		local lightComponent = lightEntry.lightComponent

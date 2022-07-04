@@ -7,7 +7,10 @@ Supported games: DMC5, Monster Hunter Rise, Resident Evil 2 Remake, Resident Evi
 
 Changelog
 -----------
-v1.11	- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
+v1.1.3		- Fixed scene light issue when switching scene lights off and on again
+			- Filtered our lights from the scene lights list
+			- Added a new button to copy light properties into a new light
+v1.1.1		- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
 v1.1		- Added tonemapping settings and updated some initial values
 v1.0		- First release
 

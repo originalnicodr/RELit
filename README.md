@@ -19,6 +19,8 @@ RELit depends on the REFramework by praydog. You need to download the REFramewor
 For more information about REFramework, visit [the project repository](https://github.com/praydog/REFramework).
 
 ## Installation
+Please visit the [Releases](https://github.com/originalnicodr/RELit/releases) to get the latest release. 
+
 After downloading the REFramework zip for your game, unpack that zip into a folder. Then copy *only* the `dinput8.dll` file and place
 it in the game's folder, where the exe is. So e.g. in the case of DMC5, you download the DMC5.zip from the REFramework releases, 
 unpack it into a folder, and then copy the `dinput8.dll` file to the DMC5 game folder, which is `<steam folder>\common\Devil May Cry 5`

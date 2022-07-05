@@ -6,6 +6,8 @@
 
 ---
 
+**NOTE**: You're not allowed to re-host this mod anywhere else, be it Nexus or your own site or on some discord or whatever else you can come up with. 
+
 RELit is a powerful tool to create spotlight and pointlights in RE powered games. Please read the requirements and how to install it.
 
 RELit was written by [Originalnicodr](https://github.com/originalnicodr) and [Otis_inf](https://github.com/FransBouma).

@@ -246,38 +246,19 @@ local function get_scene_lights()
 			-- lua doesnt have a continue statement...
 			if string.find(gameObject:call("get_Name"),"RELit") then goto continue end
 
-			local lightType = " (SpotLight)"
-			-- why would anyone want to use a switch/case statement.... 
-			local component = get_component_by_type(gameObject,"via.render.SpotLight")
-			if component == nil then
-				component = get_component_by_type(gameObject, "via.render.PointLight")
-				if component == nil then
-					component = get_component_by_type(gameObject, "via.render.AreaLight")
-					if component == nil then
-						component = get_component_by_type(gameObject, "via.render.DirectionalLight")
-						if component == nil then
-							component = get_component_by_type(gameObject, "via.render.ProjectionSpotLight")
-							if component == nil then
-								component = get_component_by_type(gameObject, "via.render.SkyLight")
-								if component == nil then
-									component = get_component_by_type(gameObject, "via.render.Light")
-									if component ~= nil then
-										lightType = " (Light)"
-									end
-								else
-									lightType = " (SkyLight)"
-								end
-							else
-								lightType = " (ProjectionSpotLight)"
-							end
-						else
-							lightType = " (DirectionalLight)"
-						end
-					else
-						lightType = " (AreaLight)"
-					end
-				else
-					lightType = " (PointLight)"
+			local lightTypesTable = {
+				"SpotLight", "PointLight", "AreaLight", "DirectionalLight", "ProjectionSpotLight", "SkyLight", "Light"
+			}
+
+			local component = nil
+			local lightType = nil
+			for _, key in ipairs(lightTypesTable) do
+				-- The game queries as via.render.Type, e.g via.render.SpotLight
+				component = get_component_by_type(gameObject, "via.render." .. key)
+				if component ~= nil then
+					-- The output we want is " (Light)" for example.
+					lightType = string.format(" (%s)", key)
+					break
 				end
 			end
 			

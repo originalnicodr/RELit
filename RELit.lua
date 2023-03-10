@@ -53,6 +53,17 @@ local customTonemapping = {
 	exposure = 0,
 	isInitialized = false
 }
+
+-- Table used to get the scene lights.
+local lightTypesTable = {
+    ["SpotLight"] = "via.render.SpotLight",
+    ["PointLight"] = "via.render.PointLight",
+    ["AreaLight"] = "via.render.AreaLight",
+    ["DirectionalLight"] = "via.render.DirectionalLight",
+    ["ProjectionSpotLight"] = "via.render.ProjectionSpotLight",
+    ["SkyLight"] = "via.render.SkyLight",
+    ["Light"] = "via.render.Light"
+}
 ---------------------------------------
 
 -----------Utility functions-----------
@@ -246,22 +257,18 @@ local function get_scene_lights()
 			-- lua doesnt have a continue statement...
 			if string.find(gameObject:call("get_Name"),"RELit") then goto continue end
 
-			local lightTypesTable = {
-				"SpotLight", "PointLight", "AreaLight", "DirectionalLight", "ProjectionSpotLight", "SkyLight", "Light"
-			}
-
 			local component = nil
 			local lightType = nil
-			for _, key in ipairs(lightTypesTable) do
+			for key, light_component_name in pairs(lightTypesTable) do
 				-- The game queries as via.render.Type, e.g via.render.SpotLight
-				component = get_component_by_type(gameObject, "via.render." .. key)
+				component = get_component_by_type(gameObject, light_component_name)
 				if component ~= nil then
 					-- The output we want is " (Light)" for example.
 					lightType = string.format(" (%s)", key)
 					break
 				end
 			end
-			
+
 			if component ~= nil then
 				local isEnabled = component:call("get_Enabled")
 				local isDrawn = gameObject:read_byte(0x13)

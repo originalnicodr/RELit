@@ -56,13 +56,13 @@ local customTonemapping = {
 
 -- Table used to get the scene lights.
 local lightTypesTable = {
-    ["SpotLight"] = "via.render.SpotLight",
-    ["PointLight"] = "via.render.PointLight",
-    ["AreaLight"] = "via.render.AreaLight",
-    ["DirectionalLight"] = "via.render.DirectionalLight",
-    ["ProjectionSpotLight"] = "via.render.ProjectionSpotLight",
-    ["SkyLight"] = "via.render.SkyLight",
-    ["Light"] = "via.render.Light"
+    ["SpotLight"] = {"via.render.SpotLight", " (SpotLight)"},
+    ["PointLight"] = {"via.render.PointLight", " (PointLight)"},
+    ["AreaLight"] = {"via.render.AreaLight", " (AreaLight)"},
+    ["DirectionalLight"] = {"via.render.DirectionalLight", " (DirectionalLight)"},
+    ["ProjectionSpotLight"] = {"via.render.ProjectionSpotLight", " (ProjectionSpotLight)"},
+    ["SkyLight"] = {"via.render.SkyLight", " (SkyLight)"},
+    ["Light"] = {"via.render.Light", " (Light)"}
 }
 ---------------------------------------
 
@@ -261,10 +261,10 @@ local function get_scene_lights()
 			local lightType = nil
 			for key, light_component_name in pairs(lightTypesTable) do
 				-- The game queries as via.render.Type, e.g via.render.SpotLight
-				component = get_component_by_type(gameObject, light_component_name)
+				component = get_component_by_type(gameObject, light_component_name[1])
 				if component ~= nil then
 					-- The output we want is " (Light)" for example.
-					lightType = string.format(" (%s)", key)
+					lightType = light_component_name[2]
 					break
 				end
 			end

@@ -53,6 +53,17 @@ local customTonemapping = {
 	exposure = 0,
 	isInitialized = false
 }
+
+-- Table used to get the scene lights.
+local lightTypesTable = {
+    ["SpotLight"] = {"via.render.SpotLight", " (SpotLight)"},
+    ["PointLight"] = {"via.render.PointLight", " (PointLight)"},
+    ["AreaLight"] = {"via.render.AreaLight", " (AreaLight)"},
+    ["DirectionalLight"] = {"via.render.DirectionalLight", " (DirectionalLight)"},
+    ["ProjectionSpotLight"] = {"via.render.ProjectionSpotLight", " (ProjectionSpotLight)"},
+    ["SkyLight"] = {"via.render.SkyLight", " (SkyLight)"},
+    ["Light"] = {"via.render.Light", " (Light)"}
+}
 ---------------------------------------
 
 -----------Utility functions-----------
@@ -246,41 +257,18 @@ local function get_scene_lights()
 			-- lua doesnt have a continue statement...
 			if string.find(gameObject:call("get_Name"),"RELit") then goto continue end
 
-			local lightType = " (SpotLight)"
-			-- why would anyone want to use a switch/case statement.... 
-			local component = get_component_by_type(gameObject,"via.render.SpotLight")
-			if component == nil then
-				component = get_component_by_type(gameObject, "via.render.PointLight")
-				if component == nil then
-					component = get_component_by_type(gameObject, "via.render.AreaLight")
-					if component == nil then
-						component = get_component_by_type(gameObject, "via.render.DirectionalLight")
-						if component == nil then
-							component = get_component_by_type(gameObject, "via.render.ProjectionSpotLight")
-							if component == nil then
-								component = get_component_by_type(gameObject, "via.render.SkyLight")
-								if component == nil then
-									component = get_component_by_type(gameObject, "via.render.Light")
-									if component ~= nil then
-										lightType = " (Light)"
-									end
-								else
-									lightType = " (SkyLight)"
-								end
-							else
-								lightType = " (ProjectionSpotLight)"
-							end
-						else
-							lightType = " (DirectionalLight)"
-						end
-					else
-						lightType = " (AreaLight)"
-					end
-				else
-					lightType = " (PointLight)"
+			local component = nil
+			local lightType = nil
+			for key, light_component_name in pairs(lightTypesTable) do
+				-- The game queries as via.render.Type, e.g via.render.SpotLight
+				component = get_component_by_type(gameObject, light_component_name[1])
+				if component ~= nil then
+					-- The output we want is " (Light)" for example.
+					lightType = light_component_name[2]
+					break
 				end
 			end
-			
+
 			if component ~= nil then
 				local isEnabled = component:call("get_Enabled")
 				local isDrawn = gameObject:read_byte(0x13)

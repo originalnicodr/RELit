@@ -7,6 +7,7 @@ Supported games: DMC5, Monster Hunter Rise, Resident Evil 2 Remake, Resident Evi
 
 Changelog
 -----------
+v1.1.4		- Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
 v1.1.3		- Fixed scene light issue when switching scene lights off and on again
 			- Filtered our lights from the scene lights list
 			- Added a new button to copy light properties into a new light

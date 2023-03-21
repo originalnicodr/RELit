@@ -92,7 +92,14 @@ This adds to any set of colors with a color that corresponds to the temperature 
 This controls how bright the light is.
 
 ## Radius
-This controls how far the light can travel, likely in in-game meters. Keep in mind that, for the light to be able to render farther it will increase its "intensity" closer to the origin (like a real-life light would do).
+This controls how far the light can travel, likely in in-game meters. Keep in mind that, for the light to 
+be able to render further away, it will increase its "intensity" closer to the origin (like a real-life light would do). 
+
+Note: In newer engines this has no longer any effect
+
+## Effective range
+In newer engines this is effectively the range how far the light can travel. In meters. Keep in mind that, for the light to 
+be able to render further away, it will increase its "intensity" closer to the origin (like a real-life light would do). 
 
 ## Falloff - Spotlight only
 This slider controls how far in the world the light will affect geometry and models. The higher the value the more will be lit by the light.

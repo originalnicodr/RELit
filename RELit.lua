@@ -1,6 +1,6 @@
 --//////////////////////////////////////////////////////////////////////////////////////////////
 --MIT License
---Copyright (c) 2022 Frans 'Otis_Inf' Bouma & Nicolás 'originalnicodr' Uriel Navall 
+--Copyright (c) 2023 Frans 'Otis_Inf' Bouma & Nicolás 'originalnicodr' Uriel Navall 
 --
 --Permission is hereby granted, free of charge, to any person obtaining a copy
 --of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
+-- v1.1.4	- Added ReferenceEffectiveRange support, added more properties in for copy light to copy. 
 -- v1.1.3	- Fixed scene light issue where we switched lights off if they were enabled, but we should have first collected the drawn lights and used that set
 -- v1.1.2	- Filtered our lights from the scene lights list and added a new button to copy light properties into a new light
 -- v1.1.1	- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
@@ -31,7 +32,7 @@
 -----------Globals and Constants-----------
 local DEBUG = false			-- set to true to enable debug controls and other debug code.
 
-local relitVersion = "1.13"
+local relitVersion = "1.1.4"
 
 local lightsTable = {}
 local lightCounter = 0
@@ -44,6 +45,7 @@ local colorDefault = Vector3f.new(1, 1, 1)
 local shadowBiasDefault = 0.00050
 local shadowDepthBiasDefault = 0.001
 local shadowSlopeBiasDefault = 0.000055
+local referenceEffectiveRangeDefault = 5.0
 
 local sceneLights = {}
 local switchedOnOffSceneLights = {}
@@ -194,6 +196,7 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
 		lightComponent:call("set_ShadowVariance", 0)
 		lightComponent:call("set_ShadowDepthBias", shadowDepthBiasDefault)
 		lightComponent:call("set_ShadowSlopeBias", shadowSlopeBiasDefault)
+		lightComponent:call("set_ReferenceEffectiveRange", referenceEffectiveRangeDefault)
 	end
 
     move_light_to_camera(lightGameObject)
@@ -579,9 +582,10 @@ local function light_editor_menu()
 				handle_float_value(lightComponent, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10)
 				if gameName~="dmc5" then
 					-- volumetric scattering intensity always reverts to 0 in DMC5. In most other games it has little/no effect either but we'll disable it for DMC5 only for now.
-					handle_float_value(lightComponent, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 0.01, 0, 100000)
+					handle_float_value(lightComponent, "Volumetric scattering intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 1, 0, 100000)
 				end
 				handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000)
+				handle_float_value(lightComponent, "Effective range", "get_ReferenceEffectiveRange", "set_ReferenceEffectiveRange", 0.01, 0, 1000)
 				handle_float_value(lightComponent, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000)
 
 				if lightEntry.isSpotLight then
@@ -602,6 +606,7 @@ local function light_editor_menu()
 				handle_float_value(lightComponent, "Shadow depth bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.00001, 0, 1.0)
 				handle_float_value(lightComponent, "Shadow slope bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0000001, 0, 1.0)
 				handle_float_value(lightComponent, "Shadow near plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.001, 0, 5.0)
+				-- Added in RE4, but disables the light, so not enabled for now. handle_bool_value(lightComponent, "Enable Ray-traced shadows", "get_RayTracingShadowEnable", "set_RayTracingShadowEnable")
 
 				if lightEntry.isSpotLight then
 					handle_float_value(lightComponent, "Detail shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)

@@ -21,6 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
+-- v1.2		- Added gizmos support
 -- v1.1.4	- Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
 -- v1.1.3	- Fixed scene light issue where we switched lights off if they were enabled, but we should have first collected the drawn lights and used that set
 -- v1.1.2	- Filtered our lights from the scene lights list and added a new button to copy light properties into a new light
@@ -325,7 +326,6 @@ local function handle_bool_value(lightComponent, captionString, getterFuncName, 
 	if changed then lightComponent:call(setterFuncName, enabledValue) end
 end
 
---WIP--
 local function draw_gizmo(gameObject)
 	local transform = gameObject:call("get_Transform")
     if transform == nil then return end
@@ -333,14 +333,14 @@ local function draw_gizmo(gameObject)
     local mat = transform:call("get_WorldMatrix")
     local changed = false
 
-    changed, newMat = draw.gizmo(gameObject:get_address(), mat)
+    changed, newMat = draw.gizmo(gameObject:get_address(), mat, imgui.ImGuizmoOperation.UNIVERSAL, imgui.ImGuizmoMode.WORLD)
 
     if changed then
-        transform:set_rotation(newMat:to_quat())
         transform:set_position(newMat[3])
+        local eulerAngles = newMat:to_quat():to_euler()
+        transform:call("set_EulerAngle", Vector3f.new(eulerAngles.x, eulerAngles.y, eulerAngles.z))
+        write_mat4(transform, 0x80, newMat)
     end
-
-	draw.gizmo(gameObject:get_address(), newMat)
 end
 
 local function sliders_change_pos(lightGameObject)
@@ -348,7 +348,7 @@ local function sliders_change_pos(lightGameObject)
     local lightGameObjectPos = lightGameObjectTransform:get_position()
 	local lightGameObjectAngles = lightGameObjectTransform:call("get_EulerAngle")
 	
-	if imgui.tree_node("Position / orientation") then
+	if imgui.tree_node("Position / Orientation") then
 		-- X is right, Y is up, Z is out of the screen
 		ui_margin()
 		changedX, newXValue = imgui.drag_float("X (right)", lightGameObjectPos.x, 0.01, -10000, 10000)
@@ -368,6 +368,7 @@ local function sliders_change_pos(lightGameObject)
         if not changedY then newYValue = lightGameObjectPos.y end
         if not changedZ then newZValue = lightGameObjectPos.z end
         lightGameObjectTransform:set_position(Vector3f.new(newXValue, newYValue, newZValue))
+        write_mat4(lightGameObjectTransform, 0x80, lightGameObjectTransform:call("get_LocalMatrix"))
     end
 	
 	if changedPitch or changedYaw then
@@ -545,19 +546,6 @@ local function light_editor_menu()
             lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 0)
 
 			if DEBUG then
-
-				imgui.spacing()
-				ui_margin()
-				changed, enabledValue = imgui.checkbox(captionString, lightEntry.showGizmo)
-				if changed then lightEntry.showGizmo = enabledValue end
-
-				imgui.same_line()
-				imgui.text("Draw debug gizmo")		
-
-				if lightEntry.showGizmo then
-					draw_gizmo(lightGameObject)
-				end
-
 				if imgui.tree_node("Debug") then
 					if imgui.tree_node("Light component") then
 						object_explorer:handle_address(lightComponent)
@@ -569,6 +557,18 @@ local function light_editor_menu()
 					end
 					imgui.tree_pop()
 				end
+			end
+
+			imgui.spacing()
+			ui_margin()
+			changed, enabledValue = imgui.checkbox(captionString, lightEntry.showGizmo)
+			if changed then lightEntry.showGizmo = enabledValue end
+
+			imgui.same_line()
+			imgui.text("Draw Gizmo")		
+
+			if lightEntry.showGizmo then
+				draw_gizmo(lightGameObject)
 			end
 			
             sliders_change_pos(lightGameObject)

@@ -559,73 +559,6 @@ local function lights_menu()
 			imgui.pop_id()
 		end
 
-		imgui.spacing()
-		imgui.spacing()
-		if imgui.tree_node("Default Settings") then
-			if imgui.tree_node("Default Light Settings") then
-				ui_margin()
-				changed, defaultSettings.intensity = imgui.drag_float("Intensity", defaultSettings.intensity, 10, 0, 500000)
-				ui_margin()
-				local colorVec = Vector3f.new(defaultSettings.color[1], defaultSettings.color[2], defaultSettings.color[3])
-				changed, colorVec = imgui.color_picker3("Light Color", colorVec)
-				if changed then
-					defaultSettings.color = {colorVec.x, colorVec.y, colorVec.z}
-				end
-				if gameName ~= "dmc5" then
-					ui_margin()
-					changed, defaultSettings.useTemperature = imgui.checkbox("Use Temperature", defaultSettings.useTemperature)
-					ui_margin()
-					changed, defaultSettings.temperature = imgui.drag_float("Temperature", defaultSettings.temperature, 10, 1000, 20000)
-				end
-				ui_margin()
-				changed, defaultSettings.bounceIntensity = imgui.drag_float("Bounce Intensity", defaultSettings.bounceIntensity, 0.01, 0, 1000)
-				ui_margin()
-				changed, defaultSettings.minRoughness = imgui.drag_float("Min Roughness", defaultSettings.minRoughness, 0.01, 0, 1.0)
-				ui_margin()
-				changed, defaultSettings.aoEfficiency = imgui.drag_float("AO Efficiency", defaultSettings.aoEfficiency, 0.0001, 0, 10)
-				if gameName ~= "dmc5" then
-					ui_margin()
-					changed, defaultSettings.volumetricScattering = imgui.drag_float("Volumetric Scattering Intensity", defaultSettings.volumetricScattering, 1, 0, 100000)
-				end
-				ui_margin()
-				changed, defaultSettings.radius = imgui.drag_float("Radius", defaultSettings.radius, 0.01, 0, 100000)
-				ui_margin()
-				changed, defaultSettings.referenceEffectiveRange = imgui.drag_float("Effective Range", defaultSettings.referenceEffectiveRange, 0.01, 0, 1000)
-				ui_margin()
-				changed, defaultSettings.illuminanceThreshold = imgui.drag_float("Illuminance Threshold", defaultSettings.illuminanceThreshold, 0.01, 0, 100000)
-				ui_margin()
-				changed, defaultSettings.cone = imgui.drag_float("Cone", defaultSettings.cone, 0.01, 0, 1000)
-				ui_margin()
-				changed, defaultSettings.spread = imgui.drag_float("Spread", defaultSettings.spread, 0.01, 0, 100)
-				ui_margin()
-				changed, defaultSettings.falloff = imgui.drag_float("Falloff", defaultSettings.falloff, 0.01, 0, 100)
-
-				imgui.tree_pop()
-			end
-		
-			if imgui.tree_node("Default Shadow Settings") then
-				ui_margin()
-				changed, defaultSettings.shadowsEnabled = imgui.checkbox("Enable Shadows", defaultSettings.shadowsEnabled)
-				ui_margin()
-				changed, defaultSettings.shadowBias = imgui.drag_float("Shadow Bias", defaultSettings.shadowBias, 0.0001, 0, 1.0)
-				ui_margin()
-				changed, defaultSettings.shadowBlur = imgui.drag_float("Shadow Blur", defaultSettings.shadowBlur, 0.0001, 0, 1.0)
-				ui_margin()
-				changed, defaultSettings.shadowLodBias = imgui.drag_float("Shadow LOD Bias", defaultSettings.shadowLodBias, 0.0001, 0, 1.0)
-				ui_margin()
-				changed, defaultSettings.shadowDepthBias = imgui.drag_float("Shadow Depth Bias", defaultSettings.shadowDepthBias, 0.0001, 0, 1.0)
-				ui_margin()
-				changed, defaultSettings.shadowSlopeBias = imgui.drag_float("Shadow Slope Bias", defaultSettings.shadowSlopeBias, 0.0001, 0, 1.0)
-				ui_margin()
-				changed, defaultSettings.shadowNearPlane = imgui.drag_float("Shadow Near Plane", defaultSettings.shadowNearPlane, 0.001, 0, 5.0)
-				ui_margin()
-				changed, defaultSettings.detailShadow = imgui.drag_float("Detail Shadow", defaultSettings.detailShadow, 0.001, 0, 1.0)
-		
-				imgui.tree_pop()
-			end
-		
-			imgui.tree_pop()
-		end		
 		imgui.tree_pop()
 	end
 end
@@ -663,8 +596,8 @@ local function light_editor_menu()
 
         if lightEntry.showLightEditor then
 			imgui.push_id(lightEntry.id)
-			imgui.set_next_window_size(Vector2f.new(400, 600), 2)		-- Once
-            lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription..tostring(i).." editor", true, 0)
+			imgui.set_next_window_size(Vector2f.new(400, 600), 2)
+            lightEntry.showLightEditor = imgui.begin_window(lightEntry.typeDescription .. tostring(i) .. " Editor", true, 0)
 
 			if DEBUG then
 				if imgui.tree_node("Debug") then
@@ -699,7 +632,7 @@ local function light_editor_menu()
 
 				imgui.spacing()
 				ui_margin()
-				
+
 				changed, new_color = imgui.color_picker3("Light Color", lightComponent:call("get_Color"))
 				if changed then
 					lightComponent:call("set_Color", new_color)
@@ -707,18 +640,21 @@ local function light_editor_menu()
 
 				imgui.spacing()
 
-				if gameName~="dmc5" then
+				if gameName ~= "dmc5" then
 					-- temperature settings don't work for some reason in DMC5
 					handle_bool_value(lightComponent, "Use Temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation")
 					handle_float_value(lightComponent, "Temperature", "get_Temperature", "set_Temperature", 10, 1000, 20000)
 				end
+
 				handle_float_value(lightComponent, "Bounce Intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000)
 				handle_float_value(lightComponent, "Min Roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0)
 				handle_float_value(lightComponent, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10)
-				if gameName~="dmc5" then
+
+				if gameName ~= "dmc5" then
 					-- volumetric scattering intensity always reverts to 0 in DMC5. In most other games it has little/no effect either but we'll disable it for DMC5 only for now.
 					handle_float_value(lightComponent, "Volumetric Scattering Intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 1, 0, 100000)
 				end
+
 				handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000)
 				handle_float_value(lightComponent, "Effective Range", "get_ReferenceEffectiveRange", "set_ReferenceEffectiveRange", 0.01, 0, 1000)
 				handle_float_value(lightComponent, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000)
@@ -728,10 +664,10 @@ local function light_editor_menu()
 					handle_float_value(lightComponent, "Spread", "get_Spread", "set_Spread", 0.01, 0, 100)
 					handle_float_value(lightComponent, "Falloff", "get_Falloff", "set_Falloff", 0.01, 0, 100)
 				end
-				
+
 				imgui.tree_pop()
 			end
-			
+
 			if imgui.tree_node("Shadow Settings") then
 				imgui.spacing()
 				handle_bool_value(lightComponent, "Enable Shadows", "get_ShadowEnable", "set_ShadowEnable")
@@ -743,18 +679,59 @@ local function light_editor_menu()
 				handle_float_value(lightComponent, "Shadow Near Plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.001, 0, 5.0)
 				-- Added in RE4, but disables the light, so not enabled for now. handle_bool_value(lightComponent, "Enable Ray-traced shadows", "get_RayTracingShadowEnable", "set_RayTracingShadowEnable")
 
-				if lightEntry.isSpotLight and gameName~="dmc5" then
+				if lightEntry.isSpotLight and gameName ~= "dmc5" then
 					handle_float_value(lightComponent, "Detail Shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0)
-				end 
+				end
+
 				imgui.tree_pop()
 			end
-			
-			imgui.spacing()
-			imgui.text(" ")
-			imgui.same_line()
+
+			ui_margin()
 			if imgui.button("Close") then
 				lightEntry.showLightEditor = false
 			end
+
+			imgui.same_line()
+			if imgui.button("Copy to Default Settings") then
+				defaultSettings.intensity = lightComponent:call("get_Intensity")
+				defaultSettings.color = {
+					lightComponent:call("get_Color").x,
+					lightComponent:call("get_Color").y,
+					lightComponent:call("get_Color").z
+				}
+				defaultSettings.bounceIntensity = lightComponent:call("get_BounceIntensity")
+				defaultSettings.minRoughness = lightComponent:call("get_MinRoughness")
+				defaultSettings.aoEfficiency = lightComponent:call("get_AOEfficiency")
+				defaultSettings.radius = lightComponent:call("get_Radius")
+				defaultSettings.referenceEffectiveRange = lightComponent:call("get_ReferenceEffectiveRange")
+				defaultSettings.illuminanceThreshold = lightComponent:call("get_IlluminanceThreshold")
+				defaultSettings.shadowsEnabled = lightComponent:call("get_ShadowEnable")
+				defaultSettings.shadowBias = lightComponent:call("get_ShadowBias")
+				defaultSettings.shadowBlur = lightComponent:call("get_ShadowVariance")
+				defaultSettings.shadowLodBias = lightComponent:call("get_ShadowLodBias")
+				defaultSettings.shadowDepthBias = lightComponent:call("get_ShadowDepthBias")
+				defaultSettings.shadowSlopeBias = lightComponent:call("get_ShadowSlopeBias")
+				defaultSettings.shadowNearPlane = lightComponent:call("get_ShadowNearPlane")
+
+				if lightEntry.isSpotLight then
+					defaultSettings.cone = lightComponent:call("get_Cone")
+					defaultSettings.spread = lightComponent:call("get_Spread")
+					defaultSettings.falloff = lightComponent:call("get_Falloff")
+				end
+
+				if gameName ~= "dmc5" then
+					defaultSettings.useTemperature = lightComponent:call("get_BlackBodyRadiation")
+					defaultSettings.temperature = lightComponent:call("get_Temperature")
+					defaultSettings.volumetricScattering = lightComponent:call("get_VolumetricScatteringIntensity")
+
+					if lightEntry.isSpotLight then
+						defaultSettings.detailShadow = lightComponent:call("get_DetailShadow")
+					end
+				end
+
+				save_config()
+			end
+
 			imgui.spacing()
 
             imgui.end_window()
@@ -766,6 +743,7 @@ local function light_editor_menu()
 end
 
 local function render_reFramework_ui()
+	ui_margin()
 	changed, showWindow = imgui.checkbox("Show RELit UI", mainWindowVisible)
 	if changed then
 		mainWindowVisible = showWindow
@@ -774,6 +752,7 @@ local function render_reFramework_ui()
 	if mainWindowVisible then
 		main_menu()
 	end
+	imgui.new_line()
 end
 
 re.on_draw_ui(render_reFramework_ui)

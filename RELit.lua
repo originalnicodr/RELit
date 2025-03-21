@@ -21,7 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
--- v1.2		- Added gizmos support, settings managment and improved UI wording
+-- v1.2		- Added gizmos support, button to copy current light properties as default settings, right-click to reset lights properties, and improved UI.
 -- v1.1.4	- Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
 -- v1.1.3	- Fixed scene light issue where we switched lights off if they were enabled, but we should have first collected the drawn lights and used that set
 -- v1.1.2	- Filtered our lights from the scene lights list and added a new button to copy light properties into a new light

@@ -94,6 +94,14 @@ local function applyLightDefaultSettings(light)
     end
 end
 
+local function copyLightProperties(sourceLight, targetLight)
+    for _, key in ipairs(propertyList) do
+        if hasFunction(sourceLight, "get_" .. key) then
+            targetLight:call("set_" .. key, sourceLight:call("get_" .. key))
+        end
+    end
+end
+
 local configFilePath = "RELit_config.json"  -- Path inside `reframework/data/`
 local function save_config()
     json.dump_file(configFilePath, defaultSettings, 4)
@@ -233,38 +241,7 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
 	populateDefaultSettings(lightComponent, false)
 
 	if originalLight ~= nil then
-		lightComponent:call("set_ImportantLevel", originalLight:call("get_ImportantLevel"))
-		lightComponent:call("set_UsingSameIntensity", originalLight:call("get_UsingSameIntensity"))
-		lightComponent:call("set_BackGroundShadowEnable", originalLight:call("get_BackGroundShadowEnable"))
-
-		lightComponent:call("set_Intensity", originalLight:call("get_Intensity"))
-		lightComponent:call("set_Color", originalLight:call("get_Color"))
-		lightComponent:call("set_MinRoughness", originalLight:call("get_MinRoughness"))
-		lightComponent:call("set_AOEfficiency", originalLight:call("get_AOEfficiency"))
-		lightComponent:call("set_Radius", originalLight:call("get_Radius"))
-		lightComponent:call("set_ReferenceEffectiveRange", originalLight:call("get_ReferenceEffectiveRange"))
-		lightComponent:call("set_ShadowEnable", originalLight:call("get_ShadowEnable"))
-		lightComponent:call("set_ShadowBias", originalLight:call("get_ShadowBias"))
-		lightComponent:call("set_ShadowVariance", originalLight:call("get_ShadowVariance"))
-		lightComponent:call("set_ShadowLodBias", originalLight:call("get_ShadowLodBias"))
-		lightComponent:call("set_ShadowDepthBias", originalLight:call("get_ShadowDepthBias"))
-		lightComponent:call("set_ShadowSlopeBias", originalLight:call("get_ShadowSlopeBias"))
-		lightComponent:call("set_ShadowNearPlane", originalLight:call("get_ShadowNearPlane"))
-
-		if createSpotLight then
-			lightComponent:call("set_Cone", originalLight:call("get_Cone"))
-			lightComponent:call("set_Spread", originalLight:call("get_Spread"))
-			lightComponent:call("set_Falloff", originalLight:call("get_Falloff"))
-		end
-
-		if gameName ~= "dmc5" then
-			lightComponent:call("set_BlackBodyRadiation", originalLight:call("get_BlackBodyRadiation"))
-			lightComponent:call("set_Temperature", originalLight:call("get_Temperature"))
-			lightComponent:call("set_VolumetricScatteringIntensity", originalLight:call("get_VolumetricScatteringIntensity"))
-			if createSpotLight then
-				lightComponent:call("set_DetailShadow", originalLight:call("get_DetailShadow"))
-			end
-		end
+		copyLightProperties(originalLight, lightComponent)
 	else
 		applyLightDefaultSettings(lightComponent)
 	end

@@ -41,29 +41,58 @@ local gameName = reframework:get_game_name()
 local mainWindowVisible = false
 
 local defaultSettings = {
-    intensity = gameName == "re8" and 10000.0 or 1000.0,
-    color = {1, 1, 1},  -- Vector3f needs to be serialized manually
-    useTemperature = false,
-    temperature = 6500,
-    bounceIntensity = 0.1,
-    minRoughness = 0.0,
-    aoEfficiency = 1.0,
-    volumetricScattering = 0.0,
-    radius = 10.0,
-    referenceEffectiveRange = 5.0,
-    illuminanceThreshold = 1.0,
-    cone = 30,
-    spread = 10,
-    falloff = 1,
-    shadowsEnabled = true,
-    shadowBias = 0.00050,
-    shadowBlur = 0,
-    shadowLodBias = 0,
-    shadowDepthBias = 0.001,
-    shadowSlopeBias = 0.000055,
-    shadowNearPlane = 0.001,
-    detailShadow = 0.0
+    Intensity = 1000.0,
+    ShadowEnable = true,
+    AOEfficiency = 0.01,
+    ShadowBias = 0.001,
 }
+
+local propertyList = {
+    "Intensity", "Color", "BlackBodyRadiation", "Temperature", "BounceIntensity",
+    "MinRoughness", "AOEfficiency", "VolumetricScattering", "Radius",
+    "ReferenceEffectiveRange", "IlluminanceThreshold", "Cone", "Spread",
+    "Falloff", "ShadowEnable", "ShadowBias", "ShadowVariance", "ShadowLodBias",
+    "ShadowDepthBias", "ShadowSlopeBias", "ShadowNearPlane", "DetailShadow"
+}
+
+local function hasFunction(object, foo)
+    local success = pcall(function() object:call(foo) end)
+    return success
+end
+
+-- Ensure defaultSettings gets populated with engine values if nil
+-- Or force update when saving default settings
+local function populateDefaultSettings(light, force)
+    for _, key in ipairs(propertyList) do
+        if (defaultSettings[key] == nil or force) and hasFunction(light, "get_" .. key) then
+            if key == "Color" then
+                defaultSettings.Color = {
+                    light:call("get_Color").x,
+                    light:call("get_Color").y,
+                    light:call("get_Color").z
+                }
+            else
+                defaultSettings[key] = light:call("get_" .. key)
+            end
+
+            --print("saving defaultSettings." .. key .. ":" .. tostring(defaultSettings[key]))
+        end
+    end
+end
+
+local function applyLightDefaultSettings(light)
+    for _, key in ipairs(propertyList) do
+        if defaultSettings[key] ~= nil and hasFunction(light, "set_" .. key) then
+            if key == "Color" then
+                light:call("set_Color", Vector3f.new(table.unpack(defaultSettings.Color)))
+            else
+                light:call("set_" .. key, defaultSettings[key])
+            end
+
+            --print("applying defaultSettings." .. key .. ":" .. tostring(defaultSettings[key]))
+        end
+    end
+end
 
 local configFilePath = "RELit_config.json"  -- Path inside `reframework/data/`
 local function save_config()
@@ -201,6 +230,8 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
 
 	lightComponent:call("set_Enabled", true)
 
+	populateDefaultSettings(lightComponent, false)
+
 	if originalLight ~= nil then
 		lightComponent:call("set_ImportantLevel", originalLight:call("get_ImportantLevel"))
 		lightComponent:call("set_UsingSameIntensity", originalLight:call("get_UsingSameIntensity"))
@@ -235,36 +266,7 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
 			end
 		end
 	else
-		lightComponent:call("set_Intensity", defaultSettings.intensity)
-		lightComponent:call("set_Color", Vector3f.new(table.unpack(defaultSettings.color)))
-		lightComponent:call("set_BounceIntensity", defaultSettings.bounceIntensity)
-		lightComponent:call("set_MinRoughness", defaultSettings.minRoughness)
-		lightComponent:call("set_AOEfficiency", defaultSettings.aoEfficiency)
-		lightComponent:call("set_Radius", defaultSettings.radius)
-		lightComponent:call("set_ReferenceEffectiveRange", defaultSettings.referenceEffectiveRange)
-		lightComponent:call("set_IlluminanceThreshold", defaultSettings.illuminanceThreshold)
-		lightComponent:call("set_ShadowEnable", defaultSettings.shadowsEnabled)
-		lightComponent:call("set_ShadowBias", defaultSettings.shadowBias)
-		lightComponent:call("set_ShadowVariance", defaultSettings.shadowBlur)
-		lightComponent:call("set_ShadowLodBias", defaultSettings.shadowLodBias)
-		lightComponent:call("set_ShadowDepthBias", defaultSettings.shadowDepthBias)
-		lightComponent:call("set_ShadowSlopeBias", defaultSettings.shadowSlopeBias)
-		lightComponent:call("set_ShadowNearPlane", defaultSettings.shadowNearPlane)
-
-		if createSpotLight then
-			lightComponent:call("set_Cone", defaultSettings.cone)
-			lightComponent:call("set_Spread", defaultSettings.spread)
-			lightComponent:call("set_Falloff", defaultSettings.falloff)
-		end
-		
-		if gameName ~= "dmc5" then
-			lightComponent:call("set_BlackBodyRadiation", defaultSettings.useTemperature)
-			lightComponent:call("set_Temperature", defaultSettings.temperature)
-			lightComponent:call("set_VolumetricScatteringIntensity", defaultSettings.volumetricScattering)
-			if createSpotLight then
-				lightComponent:call("set_DetailShadow", defaultSettings.detailShadow)
-			end
-		end
+		applyLightDefaultSettings(lightComponent)
 	end
 
     move_light_to_camera(lightGameObject)
@@ -662,7 +664,7 @@ local function light_editor_menu()
             sliders_change_pos(lightGameObject)
 
 			if imgui.tree_node("Light Settings") then
-				handle_float_value(lightComponent, "Intensity", "get_Intensity", "set_Intensity", 10, 0, 500000, defaultSettings.intensity)
+				handle_float_value(lightComponent, "Intensity", "get_Intensity", "set_Intensity", 10, 0, 500000, defaultSettings.Intensity)
 
 				imgui.spacing()
 				ui_margin()
@@ -677,27 +679,27 @@ local function light_editor_menu()
 
 				if gameName ~= "dmc5" then
 					-- temperature settings don't work for some reason in DMC5
-					handle_bool_value(lightComponent, "Use Temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation", defaultSettings.useTemperature)
-					handle_float_value(lightComponent, "Temperature", "get_Temperature", "set_Temperature", 10, 1000, 20000, defaultSettings.temperature)
+					handle_bool_value(lightComponent, "Use Temperature", "get_BlackBodyRadiation", "set_BlackBodyRadiation", defaultSettings.BlackBodyRadiation)
+					handle_float_value(lightComponent, "Temperature", "get_Temperature", "set_Temperature", 10, 1000, 20000, defaultSettings.Temperature)
 				end
 
-				handle_float_value(lightComponent, "Bounce Intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000, defaultSettings.bounceIntensity)
-				handle_float_value(lightComponent, "Min Roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0, defaultSettings.minRoughness)
-				handle_float_value(lightComponent, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10, defaultSettings.aoEfficiency)
+				handle_float_value(lightComponent, "Bounce Intensity", "get_BounceIntensity", "set_BounceIntensity", 0.01, 0, 1000, defaultSettings.BounceIntensity)
+				handle_float_value(lightComponent, "Min Roughness", "get_MinRoughness", "set_MinRoughness", 0.01, 0, 1.0, defaultSettings.MinRoughness)
+				handle_float_value(lightComponent, "AO Efficiency", "get_AOEfficiency", "set_AOEfficiency", 0.0001, 0, 10, defaultSettings.AOEfficiency)
 
 				if gameName ~= "dmc5" then
 					-- volumetric scattering intensity always reverts to 0 in DMC5. In most other games it has little/no effect either but we'll disable it for DMC5 only for now.
-					handle_float_value(lightComponent, "Volumetric Scattering Intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 1, 0, 100000, defaultSettings.volumetricScattering)
+					handle_float_value(lightComponent, "Volumetric Scattering Intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 1, 0, 100000, defaultSettings.VolumetricScattering)
 				end
 
-				handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000, defaultSettings.radius)
-				handle_float_value(lightComponent, "Effective Range", "get_ReferenceEffectiveRange", "set_ReferenceEffectiveRange", 0.01, 0, 1000, defaultSettings.referenceEffectiveRange)
-				handle_float_value(lightComponent, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000, defaultSettings.illuminanceThreshold)
+				handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000, defaultSettings.Radius)
+				handle_float_value(lightComponent, "Effective Range", "get_ReferenceEffectiveRange", "set_ReferenceEffectiveRange", 0.01, 0, 1000, defaultSettings.ReferenceEffectiveRange)
+				handle_float_value(lightComponent, "Illuminance Threshold", "get_IlluminanceThreshold", "set_IlluminanceThreshold", 0.01, 0, 100000, defaultSettings.IlluminanceThreshold)
 
 				if lightEntry.isSpotLight then
-					handle_float_value(lightComponent, "Cone", "get_Cone", "set_Cone", 0.01, 0, 1000, defaultSettings.cone)
-					handle_float_value(lightComponent, "Spread", "get_Spread", "set_Spread", 0.01, 0, 100, defaultSettings.spread)
-					handle_float_value(lightComponent, "Falloff", "get_Falloff", "set_Falloff", 0.01, 0, 100, defaultSettings.falloff)
+					handle_float_value(lightComponent, "Cone", "get_Cone", "set_Cone", 0.01, 0, 1000, defaultSettings.Cone)
+					handle_float_value(lightComponent, "Spread", "get_Spread", "set_Spread", 0.01, 0, 100, defaultSettings.Spread)
+					handle_float_value(lightComponent, "Falloff", "get_Falloff", "set_Falloff", 0.01, 0, 100, defaultSettings.Falloff)
 				end
 
 				imgui.tree_pop()
@@ -705,17 +707,17 @@ local function light_editor_menu()
 
 			if imgui.tree_node("Shadow Settings") then
 				imgui.spacing()
-				handle_bool_value(lightComponent, "Enable Shadows", "get_ShadowEnable", "set_ShadowEnable", defaultSettings.shadowsEnabled)
-				handle_float_value(lightComponent, "Shadow Bias", "get_ShadowBias", "set_ShadowBias", 0.0001, 0, 1.0, defaultSettings.shadowBias)
-				handle_float_value(lightComponent, "Shadow Blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0, defaultSettings.shadowBlur)
-				handle_float_value(lightComponent, "Shadow LOD Bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0001, 0, 1.0, defaultSettings.shadowLodBias)
-				handle_float_value(lightComponent, "Shadow Depth Bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0001, 0, 1.0, defaultSettings.shadowDepthBias)
-				handle_float_value(lightComponent, "Shadow Slope Bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0001, 0, 1.0, defaultSettings.shadowSlopeBias)
-				handle_float_value(lightComponent, "Shadow Near Plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.001, 0, 5.0, defaultSettings.shadowNearPlane)
+				handle_bool_value(lightComponent, "Enable Shadows", "get_ShadowEnable", "set_ShadowEnable", defaultSettings.ShadowEnable)
+				handle_float_value(lightComponent, "Shadow Bias", "get_ShadowBias", "set_ShadowBias", 0.0001, 0.001, 1.0, defaultSettings.ShadowBias)
+				handle_float_value(lightComponent, "Shadow Blur", "get_ShadowVariance", "set_ShadowVariance", 0.0001, 0, 1.0, defaultSettings.ShadowVariance)
+				handle_float_value(lightComponent, "Shadow LOD Bias", "get_ShadowLodBias", "set_ShadowLodBias", 0.0001, 0, 1.0, defaultSettings.ShadowLodBias)
+				handle_float_value(lightComponent, "Shadow Depth Bias", "get_ShadowDepthBias", "set_ShadowDepthBias", 0.0001, 0, 1.0, defaultSettings.ShadowDepthBias)
+				handle_float_value(lightComponent, "Shadow Slope Bias", "get_ShadowSlopeBias", "set_ShadowSlopeBias", 0.0001, 0, 1.0, defaultSettings.ShadowSlopeBias)
+				handle_float_value(lightComponent, "Shadow Near Plane", "get_ShadowNearPlane", "set_ShadowNearPlane", 0.001, 0, 5.0, defaultSettings.ShadowNearPlane)
 				-- Added in RE4, but disables the light, so not enabled for now. handle_bool_value(lightComponent, "Enable Ray-traced shadows", "get_RayTracingShadowEnable", "set_RayTracingShadowEnable")
 
 				if lightEntry.isSpotLight and gameName ~= "dmc5" then
-					handle_float_value(lightComponent, "Detail Shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0, defaultSettings.detailShadow)
+					handle_float_value(lightComponent, "Detail Shadow", "get_DetailShadow", "set_DetailShadow", 0.001, 0, 1.0, defaultSettings.DetailShadow)
 				end
 
 				imgui.tree_pop()
@@ -729,41 +731,7 @@ local function light_editor_menu()
 
 			imgui.same_line()
 			if imgui.button("Save settings as default") then
-				defaultSettings.intensity = lightComponent:call("get_Intensity")
-				defaultSettings.color = {
-					lightComponent:call("get_Color").x,
-					lightComponent:call("get_Color").y,
-					lightComponent:call("get_Color").z
-				}
-				defaultSettings.bounceIntensity = lightComponent:call("get_BounceIntensity")
-				defaultSettings.minRoughness = lightComponent:call("get_MinRoughness")
-				defaultSettings.aoEfficiency = lightComponent:call("get_AOEfficiency")
-				defaultSettings.radius = lightComponent:call("get_Radius")
-				defaultSettings.referenceEffectiveRange = lightComponent:call("get_ReferenceEffectiveRange")
-				defaultSettings.illuminanceThreshold = lightComponent:call("get_IlluminanceThreshold")
-				defaultSettings.shadowsEnabled = lightComponent:call("get_ShadowEnable")
-				defaultSettings.shadowBias = lightComponent:call("get_ShadowBias")
-				defaultSettings.shadowBlur = lightComponent:call("get_ShadowVariance")
-				defaultSettings.shadowLodBias = lightComponent:call("get_ShadowLodBias")
-				defaultSettings.shadowDepthBias = lightComponent:call("get_ShadowDepthBias")
-				defaultSettings.shadowSlopeBias = lightComponent:call("get_ShadowSlopeBias")
-				defaultSettings.shadowNearPlane = lightComponent:call("get_ShadowNearPlane")
-
-				if lightEntry.isSpotLight then
-					defaultSettings.cone = lightComponent:call("get_Cone")
-					defaultSettings.spread = lightComponent:call("get_Spread")
-					defaultSettings.falloff = lightComponent:call("get_Falloff")
-				end
-
-				if gameName ~= "dmc5" then
-					defaultSettings.useTemperature = lightComponent:call("get_BlackBodyRadiation")
-					defaultSettings.temperature = lightComponent:call("get_Temperature")
-					defaultSettings.volumetricScattering = lightComponent:call("get_VolumetricScatteringIntensity")
-
-					if lightEntry.isSpotLight then
-						defaultSettings.detailShadow = lightComponent:call("get_DetailShadow")
-					end
-				end
+				populateDefaultSettings(lightComponent, true)
 
 				save_config()
 			end

@@ -3,7 +3,7 @@
 <p align="center"><img src="https://user-images.githubusercontent.com/24371572/177046952-45208d6f-edb2-4e6b-ba58-6b795053705c.png"></p>
 
 <p align="center"><a href="../../releases/latest"><img src="https://img.shields.io/github/release/originalnicodr/RELit.svg?label=version" alt="Latest"></a>
-<a href="https://github.com/praydog/REFramework"><img src="https://img.shields.io/badge/REFramework-v1.190_c29f1c8-green.svg" alt="REFramework version"></a>
+<a href="https://github.com/praydog/REFramework"><img src="https://img.shields.io/badge/REFramework-v1.5.9.1-green.svg" alt="REFramework version"></a>
 <a href="../../releases"><img src="https://img.shields.io/github/downloads/originalnicodr/RELit/total.svg" alt="Downloads"></a></p>
 
 ---

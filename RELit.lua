@@ -43,7 +43,7 @@ local mainWindowVisible = false
 local defaultSettings = {
     Intensity = 1000.0,
     ShadowEnable = true,
-    AOEfficiency = 0.01,
+    AOEfficiency = 0.03,
     ShadowBias = 0.001,
 }
 

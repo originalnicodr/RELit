@@ -16,7 +16,7 @@ RELit was written by [Originalnicodr](https://github.com/originalnicodr) and [Ot
 
 Special thanks go to [alphaZomega](https://github.com/alphazolam) for the assistance and [praydog](https://github.com/praydog) for REFramework.
 
-At the time of writing the supported games are *Devil May Cry 5*, *Monster Hunter Rise*, *Resident Evil 2 Remake*, *Resident Evil 3 Remake*, *Resident Evil 7* and *Resident Evil Village*, but we would expect future Capcom games that run on the RE Engine and are supported by REFramework to work as well.
+At the time of writing the supported games are *Devil May Cry 5*, *Monster Hunter Rise*, *Resident Evil 2 Remake*, *Resident Evil 3 Remake*, *Resident Evil 7* and *Resident Evil Village*, *Resident Evil 4*, *Dragon's Dogma 2*, and *Monster Hunter Wilds*. But we would expect future Capcom games that run on the RE Engine and are supported by REFramework to work as well.
 
 ## Requirements
 RELit depends on the REFramework by praydog. You need to download the REFramework version for your game, [here](https://github.com/praydog/REFramework-nightly/releases) (currently using the nightly builds, for a stable version go [here](https://github.com/praydog/REFramework/releases)). Go to the latest release and then click the .zip file for the game you want to use RELit with. 

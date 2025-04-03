@@ -3,17 +3,18 @@ RELit readme
 RELit is a powerful tool to create spotlight and pointlights in RE powered games. Please read the requirements and how to install it.
 RELit was written by Originalnicodr and Otis_Inf
 
-Supported games: DMC5, Monster Hunter Rise, Resident Evil 2 Remake, Resident Evil 3 Remake, Resident Evil 7 and Resident Evil Village
+Supported games: DMC5, Monster Hunter Rise, Resident Evil 2 Remake, Resident Evil 3 Remake, Resident Evil 7, Resident Evil Village, Resident Evil 4, Dragon's Dogma 2, and Monster Hunter Wilds.
 
 Changelog
 -----------
-v1.1.4		- Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
-v1.1.3		- Fixed scene light issue when switching scene lights off and on again
-			- Filtered our lights from the scene lights list
-			- Added a new button to copy light properties into a new light
-v1.1.1		- Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
-v1.1		- Added tonemapping settings and updated some initial values
-v1.0		- First release
+v1.2        - Added gizmos support, reworked default properties, button to copy current light properties as default settings, right-click to reset lights properties, and improved UI.
+v1.1.4      - Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
+v1.1.3      - Fixed scene light issue when switching scene lights off and on again
+            - Filtered our lights from the scene lights list
+            - Added a new button to copy light properties into a new light
+v1.1.1      - Added scene light usage, refactored code, tweaked settings, restructured the UI to use a separate window, tweaked the light editor to use an initial size
+v1.1        - Added tonemapping settings and updated some initial values
+v1.0        - First release
 
 Requirements
 ---------------

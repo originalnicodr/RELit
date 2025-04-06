@@ -21,6 +21,7 @@
 --SOFTWARE.
 --//////////////////////////////////////////////////////////////////////////////////////////////
 -- Changelog
+-- v1.2.1    - Fixed volumetric scattering intensity not being editable, and fixed some necessary setters that were lost in the refactoring.
 -- v1.2      - Added gizmos support, reworked default properties, button to copy current light properties as default settings, right-click to reset lights properties, and improved UI.
 -- v1.1.4    - Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
 -- v1.1.3    - Fixed scene light issue where we switched lights off if they were enabled, but we should have first collected the drawn lights and used that set
@@ -33,7 +34,7 @@
 -----------Globals and Constants-----------
 local DEBUG = false            -- set to true to enable debug controls and other debug code.
 
-local relitVersion = "1.2"
+local relitVersion = "1.2.1"
 
 local lightsTable = {}
 local lightCounter = 0
@@ -49,7 +50,7 @@ local defaultSettings = {
 
 local propertyList = {
     "Intensity", "Color", "BlackBodyRadiation", "Temperature", "BounceIntensity",
-    "MinRoughness", "AOEfficiency", "VolumetricScattering", "Radius",
+    "MinRoughness", "AOEfficiency", "VolumetricScatteringIntensity", "Radius",
     "ReferenceEffectiveRange", "IlluminanceThreshold", "Cone", "Spread",
     "Falloff", "ShadowEnable", "ShadowBias", "ShadowVariance", "ShadowLodBias",
     "ShadowDepthBias", "ShadowSlopeBias", "ShadowNearPlane", "DetailShadow"
@@ -237,6 +238,11 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
     local lightComponent = lua_find_component(lightGameObject, componentToCreate)
 
     lightComponent:call("set_Enabled", true)
+    lightComponent:call("setImportantLevel", 0)
+    lightComponent:call("set_UsingSameIntensity", false)
+    if createSpotLight then 
+        lightComponent:call("setBackGroundShadowEnable", false)
+    end
 
     populateDefaultSettings(lightComponent, false)
 
@@ -262,7 +268,6 @@ local function add_new_light(createSpotLight, lightNo, originalLight)
 
     table.insert(lightsTable, lightTableEntry )
 end
-
 
 local function switch_scene_light_onoff(lightGameObject, onOff)
     lightGameObject:write_byte(0x13, onOff)
@@ -666,7 +671,7 @@ local function light_editor_menu()
 
                 if gameName ~= "dmc5" then
                     -- volumetric scattering intensity always reverts to 0 in DMC5. In most other games it has little/no effect either but we'll disable it for DMC5 only for now.
-                    handle_float_value(lightComponent, "Volumetric Scattering Intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 1, 0, 100000, defaultSettings.VolumetricScattering)
+                    handle_float_value(lightComponent, "Volumetric Scattering Intensity", "get_VolumetricScatteringIntensity", "set_VolumetricScatteringIntensity", 1, 0, 100000, defaultSettings.VolumetricScatteringIntensity)
                 end
 
                 handle_float_value(lightComponent, "Radius", "get_Radius", "set_Radius", 0.01, 0, 100000, defaultSettings.Radius)

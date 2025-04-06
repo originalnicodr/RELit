@@ -7,6 +7,7 @@ Supported games: DMC5, Monster Hunter Rise, Resident Evil 2 Remake, Resident Evi
 
 Changelog
 -----------
+v1.2.1      - Fixed volumetric scattering intensity not being editable, and fixed some necessary setters that were lost in the refactoring.
 v1.2        - Added gizmos support, reworked default properties, button to copy current light properties as default settings, right-click to reset lights properties, and improved UI.
 v1.1.4      - Added ReferenceEffectiveRange support, added more properties in for copy light to copy, changed volumetric scattering intensity step size to 1
 v1.1.3      - Fixed scene light issue when switching scene lights off and on again
